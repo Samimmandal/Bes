@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes" />
+    <title>Bes An Noor · School Portal</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com">
+    </script>
+
+    <!-- React + ReactDOM UMD -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js">
+    </script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js">
+    </script>
+
+    <!-- Babel Standalone for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js">
+    </script>
+
+    <!-- Firebase Compat (v10) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js">
+    </script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-auth-compat.js">
+    </script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore-compat.js">
+    </script>
+
+    <style>
+        /* smooth scroll & safe bottom padding */
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            background: #f1f5f9;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #root {
+            width: 100%;
+            max-width: 420px;
+            margin: 0 auto;
+            min-height: 100vh;
+            position: relative;
+        }
+        .pb-safe {
+            padding-bottom: env(safe-area-inset-bottom, 0.75rem);
+        }
+        .animate-in {
+            animation: fadeSlide 0.25s ease-out;
+        }
+        @keyframes fadeSlide {
+            0% {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        /* custom scrollbar */
+        .overflow-y-auto::-webkit-scrollbar {
+            width: 4px;
+        }
+        .overflow-y-auto::-webkit-scrollbar-thumb {
+            background: #b0c4de;
+            border-radius: 8px;
+        }
+        .overflow-y-auto::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        /* icon placeholders */
+        .icon-svg {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .icon-svg svg {
+            width: 1.25em;
+            height: 1.25em;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        .icon-svg-lg svg {
+            width: 1.5em;
+            height: 1.5em;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // ─── GLOBALS ───────────────────────────────────────────────
+        const React = window.React;
+        const ReactDOM = window.ReactDOM;
+        const { useState, useEffect, useMemo, useCallback, useRef } = React;
+
+        // ─── ICON COMPONENTS (simple SVG replacements) ──────────
+        const IconHome = ({ size, className }) => <span className={`icon-svg ${className || ''}`}><svg viewBox="0 0 24 24" width={size || 20} height={size || 20}><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg></span>;
+        const IconClipboard = ({ size, className }) => <span className={`icon-svg ${className || ''}`}><svg viewBox="0 0 24 24" width={size || 20} height={size || 20}><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /><path d="M9 13l2 2 4-4" /></svg></span>;
+        const IconCalendar = ({ size, className }) => <span className={`icon-svg ${className || ''}`}><svg viewBox="0 0 24 24" width={size || 20} height={size || 20}><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg></span>;
+        const IconUser = ({ size, className }) => <span className={`icon-svg ${className || ''}`}><svg viewBox="0 0 24 24" width={size || 20} height={size || 20}><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" /></svg></span>;
+        const IconStethoscope = ({ size, className }) => <span className={`icon-svg ${className || ''}`}><svg viewBox="0 0 24 24" width={size || 20} height={size || 20}><path d="M4.5 9.5a5 5 0 0110 0v3.5a5 5 0 01-10 0V9.5z" /><path d="M9.5 14.5v3a4 4 0 004 4h2a4 4 0 004-4v-3" /><circle cx="19.5" cy="9.5" r="1.5" /></svg></span>;
+        const IconWrench = ({ size, className }) => <span className={`icon-svg ${className || ''}`}><svg viewBox="0 0 24 24" width={size || 20} height={size || 20}><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" /></svg></span>;
+        const IconLogOut = ({ size, className }) => <span className={`icon-svg ${className || ''}`}><svg viewBox="0 0 24 24" width={size || 20} height={size || 20}><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg></span>;
+        const IconPlusCircle = ({ size, className }) => <span className={`icon-svg ${className || ''}`}><svg viewBox="0 0 24 24" width={size || 20} height={size || 20}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" /></svg></span>;
+        const IconCheckCircle = ({ size, className }) => <span className={`icon-svg ${className || ''}`}><svg viewBox="0 0 24 24" width={size || 20} height={size || 20}><path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg></span>;
+        const IconAlertCircle = ({ size, className }) => <span className={`icon-svg ${className || ''}`}><svg viewBox="0 0 24 24" width={size || 20} height={size || 20}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg></span>;
+        const IconFileText = ({ size, className }) => <span className={`icon-svg ${className || ''}`}><svg viewBox="0 0 24 24" width={size || 20} height={size || 20}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg></span>;
+        const IconImage = ({ size, className }) => <span className={`icon-svg ${className || ''}`}><svg viewBox="0 0 24 24" width={size || 20} height={size || 20}><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg></span>;
+        const IconBell = ({ size, className }) => <span className={`icon-svg ${className || ''}`}><svg viewBox="0 0 24 24" width={size || 20} height={size || 20}><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 01-3.46 0" /></svg></span>;
+
+        // ─── FIREBASE SETUP (compat) ────────────────────────────
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyDemoKeyPlaceholder",
+            authDomain: "your-app.firebaseapp.com",
+            projectId: "your-project-id",
+            storageBucket: "your-app.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef"
+        };
+        const APP_ID = 'bes-an-noor-app';
+
+        let firebaseApp, auth, db;
+        try {
+            firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
+            auth = firebase.auth();
+            db = firebase.firestore();
+        } catch (e) {
+            console.warn("Firebase init skipped (demo mode).", e);
+            // fallback stubs
+            auth = { currentUser: null, onAuthStateChanged: () => { } };
+            db = { collection: () => ({ doc: () => ({ collection: () => ({ onSnapshot: () => { } }) }) }) };
+        }
+
+        // ─── MOCK CREDENTIALS ────────────────────────────────────
+        const MOCK_CREDENTIALS = {
+            'admin': { role: 'ADMIN', name: 'Head of Dept', pass: '123' },
+            't1': { role: 'TEACHER', name: 'Mr. Rahman (Maths)', pass: '123' },
+            't2': { role: 'TEACHER', name: 'Mr. Khan (Physics)', pass: '123' },
+            'doc': { role: 'DOCTOR', name: 'Dr. Ali', pass: '123' },
+            'maint': { role: 'MAINTENANCE', name: 'Campus Facilities', pass: '123' },
+            'stu1': { role: 'STUDENT', name: 'Ahmad Abdullah', class: 'Class 10-A', reg: 'BAN-2023-1042', pass: '123' },
+        };
+
+        // ─── CUSTOM HOOK: usePublicCollection ──────────────────
+        function usePublicCollection(collectionName) {
+            const [data, setData] = useState([]);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                if (!auth || !auth.currentUser) {
+                    setLoading(false);
+                    return;
+                }
+                try {
+                    const colRef = db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection(collectionName);
+                    const unsubscribe = colRef.onSnapshot(
+                        (snapshot) => {
+                            const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                            items.sort((a, b) => {
+                                const ta = a.createdAt?.toMillis?.() || 0;
+                                const tb = b.createdAt?.toMillis?.() || 0;
+                                return tb - ta;
+                            });
+                            setData(items);
+                            setLoading(false);
+                        },
+                        (error) => {
+                            console.error(`Error fetching ${collectionName}:`, error);
+                            setLoading(false);
+                        }
+                    );
+                    return () => unsubscribe();
+                } catch (e) {
+                    console.warn("Firestore not available, using mock data for", collectionName);
+                    setLoading(false);
+                    return () => { };
+                }
+            }, [collectionName]);
+
+            const addDocument = useCallback(async (docData) => {
+                try {
+                    const colRef = db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection(collectionName);
+                    await colRef.add({ ...docData, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                } catch (e) {
+                    console.error("Error adding document:", e);
+                }
+            }, [collectionName]);
+
+            const updateDocument = useCallback(async (docId, updateData) => {
+                try {
+                    const docRef = db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection(collectionName).doc(docId);
+                    await docRef.update(updateData);
+                } catch (e) {
+                    console.error("Error updating document:", e);
+                }
+            }, [collectionName]);
+
+            return { data, loading, addDocument, updateDocument };
+        }
+
+        // ─── MAIN APP ────────────────────────────────────────────
+        function App() {
+            const [firebaseUser, setFirebaseUser] = useState(null);
+            const [appProfile, setAppProfile] = useState(null);
+            const [activeTab, setActiveTab] = useState('home');
+
+            // Auth
+            useEffect(() => {
+                if (!auth || !auth.onAuthStateChanged) return;
+                const unsub = auth.onAuthStateChanged((user) => {
+                    setFirebaseUser(user);
+                });
+                // anonymous sign-in fallback
+                if (auth.signInAnonymously) {
+                    auth.signInAnonymously().catch(() => { });
+                }
+                return () => unsub && unsub();
+            }, []);
+
+            const handleLogin = (username, password) => {
+                const user = MOCK_CREDENTIALS[username];
+                if (user && user.pass === password) {
+                    setAppProfile({ ...user, id: username });
+                } else {
+                    alert("Invalid credentials. Use demo accounts (e.g. admin / 123)");
+                }
+            };
+
+            const handleLogout = () => {
+                setAppProfile(null);
+                setActiveTab('home');
+            };
+
+            if (!firebaseUser && firebaseUser !== null) {
+                return <div className="flex h-screen items-center justify-center bg-blue-50 text-blue-800 font-semibold">Connecting...</div>;
+            }
+
+            if (!appProfile) {
+                return <LoginScreen onLogin={handleLogin} />;
+            }
+
+            return (
+                <div className="flex flex-col h-screen bg-slate-50 text-slate-800 font-sans max-w-md mx-auto shadow-2xl relative overflow-hidden">
+                    <header className="bg-blue-700 text-white p-4 pt-6 shadow-md z-10 rounded-b-2xl">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <h1 className="text-xl font-bold leading-tight">Bes An Noor</h1>
+                                <p className="text-xs text-blue-200">Model School (Boys' Unit)</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="text-right hidden sm:block">
+                                    <p className="text-sm font-semibold">{appProfile.name}</p>
+                                    <p className="text-xs text-blue-200 capitalize">{appProfile.role.toLowerCase()}</p>
+                                </div>
+                                <button onClick={handleLogout} className="p-2 bg-blue-800 rounded-full hover:bg-blue-900 transition">
+                                    <IconLogOut size={18} />
+                                </button>
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="flex-1 overflow-y-auto p-4 pb-24">
+                        {activeTab === 'home' && <HomeTab profile={appProfile} />}
+                        {activeTab === 'notices' && <NoticesTab profile={appProfile} />}
+                        {activeTab === 'schedule' && <ScheduleTab profile={appProfile} />}
+                        {activeTab === 'issues' && <IssuesTab profile={appProfile} />}
+                    </main>
+
+                    <nav className="absolute bottom-0 w-full bg-white border-t border-gray-200 flex justify-around p-3 pb-safe z-20">
+                        <NavButton icon={<IconHome />} label="Home" active={activeTab === 'home'} onClick={() => setActiveTab('home')} />
+                        <NavButton icon={<IconClipboard />} label="Notices" active={activeTab === 'notices'} onClick={() => setActiveTab('notices')} />
+                        <NavButton icon={<IconCalendar />} label="Proxy" active={activeTab === 'schedule'} onClick={() => setActiveTab('schedule')} />
+                        {['TEACHER', 'DOCTOR', 'MAINTENANCE'].includes(appProfile.role) && (
+                            <NavButton icon={<IconAlertCircle />} label="Issues" active={activeTab === 'issues'} onClick={() => setActiveTab('issues')} />
+                        )}
+                    </nav>
+                </div>
+            );
+        }
+
+        // ─── LOGIN SCREEN ──────────────────────────────────────
+        function LoginScreen({ onLogin }) {
+            const [id, setId] = useState('');
+            const [pass, setPass] = useState('');
+
+            return (
+                <div className="flex flex-col h-screen bg-slate-50 max-w-md mx-auto p-6 justify-center">
+                    <div className="text-center mb-10">
+                        <div className="bg-blue-600 text-white w-20 h-20 mx-auto rounded-2xl flex items-center justify-center shadow-lg mb-4">
+                            <IconUser size={40} />
+                        </div>
+                        <h1 className="text-3xl font-extrabold text-slate-800">Bes An Noor</h1>
+                        <p className="text-slate-500 mt-1">Boys' Unit Portal</p>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <h2 className="text-lg font-bold mb-4 text-slate-700">Secure Login</h2>
+                        <input
+                            type="text"
+                            placeholder="Login ID (e.g., admin, t1, stu1)"
+                            className="w-full p-3 mb-4 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            value={id}
+                            onChange={(e) => setId(e.target.value)}
+                        />
+                        <input
+                            type="password"
+                            placeholder="Password (e.g., 123)"
+                            className="w-full p-3 mb-6 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            value={pass}
+                            onChange={(e) => setPass(e.target.value)}
+                        />
+                        <button
+                            onClick={() => onLogin(id, pass)}
+                            className="w-full bg-blue-600 text-white font-bold p-3 rounded-xl hover:bg-blue-700 transition shadow-md"
+                        >
+                            Login
+                        </button>
+                    </div>
+
+                    <div className="mt-8 text-sm text-slate-500 bg-blue-50 p-4 rounded-xl border border-blue-100">
+                        <p className="font-semibold text-blue-800 mb-2">Demo Accounts (Pass: 123):</p>
+                        <ul className="grid grid-cols-2 gap-2 text-xs">
+                            <li><b>admin</b> (Head)</li>
+                            <li><b>t1</b> (Teacher)</li>
+                            <li><b>doc</b> (Doctor)</li>
+                            <li><b>maint</b> (Facility)</li>
+                            <li><b>stu1</b> (Student)</li>
+                        </ul>
+                    </div>
+                </div>
+            );
+        }
+
+        // ─── HOME TAB ──────────────────────────────────────────
+        function HomeTab({ profile }) {
+            if (profile.role === 'STUDENT') {
+                return (
+                    <div className="space-y-6">
+                        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 text-white shadow-lg">
+                            <div className="flex items-center gap-4 mb-4">
+                                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+                                    <IconUser size={32} />
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-bold">{profile.name}</h2>
+                                    <p className="text-blue-100 bg-white/10 inline-block px-2 py-1 rounded-md mt-1 text-sm">{profile.class}</p>
+                                </div>
+                            </div>
+                            <div className="bg-black/10 rounded-xl p-3 flex justify-between items-center">
+                                <span className="text-sm text-blue-100">Registration No.</span>
+                                <span className="font-mono font-bold tracking-wider">{profile.reg}</span>
+                            </div>
+                        </div>
+
+                        <h3 className="font-bold text-slate-700 ml-1 text-lg">Quick Actions</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                            <ActionCard icon={<IconClipboard className="text-orange-500" />} title="View Notices" subtitle="Important updates" />
+                            <ActionCard icon={<IconCalendar className="text-blue-500" />} title="Class Routine" subtitle="Today's schedule" />
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="space-y-6">
+                    <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex items-center gap-4">
+                        <div className="bg-blue-100 p-3 rounded-full text-blue-600">
+                            <IconUser size={24} />
+                        </div>
+                        <div>
+                            <h2 className="font-bold text-lg text-slate-800">Welcome, {profile.name}</h2>
+                            <p className="text-slate-500 text-sm">{profile.role} Dashboard</p>
+                        </div>
+                    </div>
+
+                    <TeacherAttendance profile={profile} />
+
+                    <h3 className="font-bold text-slate-700 ml-1 text-lg mt-6">Overview</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                        {profile.role === 'ADMIN' && (
+                            <>
+                                <ActionCard icon={<IconCalendar className="text-blue-500" />} title="Manage Proxy" subtitle="Assign teachers" />
+                                <ActionCard icon={<IconBell className="text-orange-500" />} title="Post Notice" subtitle="Announcements" />
+                            </>
+                        )}
+                        {profile.role === 'TEACHER' && (
+                            <>
+                                <ActionCard icon={<IconStethoscope className="text-red-500" />} title="Report Medical" subtitle="Student health issue" />
+                                <ActionCard icon={<IconWrench className="text-gray-500" />} title="Facility Issue" subtitle="Electric/Pipeline" />
+                            </>
+                        )}
+                        {profile.role === 'DOCTOR' && (
+                            <ActionCard icon={<IconStethoscope className="text-red-500" />} title="Medical Queue" subtitle="Pending cases" />
+                        )}
+                        {profile.role === 'MAINTENANCE' && (
+                            <ActionCard icon={<IconWrench className="text-gray-500" />} title="Work Orders" subtitle="Repairs needed" />
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        // ─── TEACHER ATTENDANCE ──────────────────────────────
+        function TeacherAttendance({ profile }) {
+            const { data: attendance, addDocument } = usePublicCollection('attendance');
+            const today = new Date().toISOString().split('T')[0];
+            const myAttendanceToday = attendance.find(a => a.date === today && a.teacherId === profile.id);
+
+            const markAttendance = () => {
+                if (!myAttendanceToday) {
+                    addDocument({
+                        date: today,
+                        teacherId: profile.id,
+                        name: profile.name,
+                        status: 'PRESENT'
+                    });
+                }
+            };
+
+            if (!['TEACHER', 'ADMIN'].includes(profile.role)) return null;
+
+            return (
+                <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 mt-4">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h3 className="font-bold text-slate-800">Daily Attendance</h3>
+                            <p className="text-sm text-slate-500">{new Date().toDateString()}</p>
+                        </div>
+                        {myAttendanceToday ? (
+                            <div className="flex items-center gap-1 text-green-600 bg-green-50 px-3 py-1.5 rounded-lg font-semibold text-sm">
+                                <IconCheckCircle size={16} /> Present
+                            </div>
+                        ) : (
+                            <button
+                                onClick={markAttendance}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md transition"
+                            >
+                                Mark Present
+                            </button>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        // ─── NOTICES TAB ──────────────────────────────────────
+        function NoticesTab({ profile }) {
+            const { data: notices, addDocument } = usePublicCollection('notices');
+            const [showForm, setShowForm] = useState(false);
+            const [newNotice, setNewNotice] = useState({ title: '', type: 'text', content: '' });
+
+            const handlePost = () => {
+                if (newNotice.title && newNotice.content) {
+                    addDocument({ ...newNotice, author: profile.name });
+                    setShowForm(false);
+                    setNewNotice({ title: '', type: 'text', content: '' });
+                }
+            };
+
+            return (
+                <div className="space-y-4">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-2xl font-bold text-slate-800">Notice Board</h2>
+                        {profile.role === 'ADMIN' && (
+                            <button onClick={() => setShowForm(!showForm)} className="text-blue-600 bg-blue-50 p-2 rounded-full">
+                                {showForm ? <IconLogOut size={20} className="rotate-45" /> : <IconPlusCircle size={24} />}
+                            </button>
+                        )}
+                    </div>
+
+                    {showForm && (
+                        <div className="bg-white p-4 rounded-2xl shadow-md border border-blue-100 mb-6 animate-in">
+                            <input
+                                type="text"
+                                placeholder="Notice Title"
+                                className="w-full p-2 mb-3 border-b border-slate-200 focus:outline-none focus:border-blue-500 font-semibold"
+                                value={newNotice.title}
+                                onChange={e => setNewNotice({ ...newNotice, title: e.target.value })}
+                            />
+                            <select
+                                className="w-full p-2 mb-3 bg-slate-50 rounded-lg text-sm border border-slate-200"
+                                value={newNotice.type}
+                                onChange={e => setNewNotice({ ...newNotice, type: e.target.value })}
+                            >
+                                <option value="text">Text Notice</option>
+                                <option value="image">Image (URL)</option>
+                                <option value="pdf">Document (PDF Link)</option>
+                            </select>
+                            <textarea
+                                placeholder={newNotice.type === 'text' ? "Enter notice content..." : "Paste valid URL here..."}
+                                className="w-full p-3 bg-slate-50 rounded-xl mb-3 text-sm min-h-[80px] border border-slate-200"
+                                value={newNotice.content}
+                                onChange={e => setNewNotice({ ...newNotice, content: e.target.value })}
+                            />
+                            <button onClick={handlePost} className="w-full bg-blue-600 text-white font-bold py-2 rounded-xl">Publish Notice</button>
+                        </div>
+                    )}
+
+                    {notices.length === 0 && <p className="text-center text-slate-400 mt-10">No notices available.</p>}
+
+                    <div className="space-y-4">
+                        {notices.map(notice => (
+                            <div key={notice.id} className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 border-l-4 border-l-blue-500">
+                                <h3 className="font-bold text-slate-800 mb-1">{notice.title}</h3>
+                                <p className="text-xs text-slate-400 mb-3">Posted by {notice.author}</p>
+
+                                {notice.type === 'text' && <p className="text-slate-600 text-sm whitespace-pre-wrap">{notice.content}</p>}
+
+                                {notice.type === 'image' && (
+                                    <div className="mt-2 rounded-xl overflow-hidden bg-slate-100 flex items-center justify-center">
+                                        <img src={notice.content} alt={notice.title} className="max-w-full h-auto object-contain max-h-64" onError={(e) => { e.target.onerror = null;
+                                            e.target.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22200%22%3E%3Crect fill=%22%23e2e8f0%22 width=%22400%22 height=%22200%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%2394a3b8%22 font-family=%22sans-serif%22 font-size=%2220%22%3EImage%20load%20failed%3C/text%3E%3C/svg%3E' }} />
+                                    </div>
+                                )}
+
+                                {notice.type === 'pdf' && (
+                                    <a href={notice.content} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-xl mt-2 text-sm font-semibold hover:bg-red-100 transition">
+                                        <IconFileText size={18} /> View Attached PDF Document
+                                    </a>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        // ─── SCHEDULE / PROXY TAB ────────────────────────────
+        function ScheduleTab({ profile }) {
+            const { data: proxies, addDocument } = usePublicCollection('proxies');
+            const [showForm, setShowForm] = useState(false);
+            const [newProxy, setNewProxy] = useState({ date: '', absentTeacher: '', proxyTeacher: '', classRoom: '', subject: '' });
+
+            const handleAssign = () => {
+                if (newProxy.date && newProxy.proxyTeacher) {
+                    addDocument(newProxy);
+                    setShowForm(false);
+                    setNewProxy({ date: '', absentTeacher: '', proxyTeacher: '', classRoom: '', subject: '' });
+                }
+            };
+
+            return (
+                <div className="space-y-4">
+                    <div className="flex justify-between items-center mb-6">
+                        <div>
+                            <h2 className="text-2xl font-bold text-slate-800">Proxy Schedule</h2>
+                            <p className="text-sm text-slate-500">Daily Substitution Roster</p>
+                        </div>
+                        {profile.role === 'ADMIN' && (
+                            <button onClick={() => setShowForm(!showForm)} className="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1">
+                                <IconPlusCircle size={16} /> Add
+                            </button>
+                        )}
+                    </div>
+
+                    {showForm && profile.role === 'ADMIN' && (
+                        <div className="bg-white p-4 rounded-2xl shadow-md border border-slate-100 mb-6 grid gap-3 text-sm animate-in">
+                            <input type="date" className="p-2 border rounded-lg" value={newProxy.date} onChange={e => setNewProxy({ ...newProxy, date: e.target.value })} />
+                            <input type="text" placeholder="Absent Teacher Name" className="p-2 border rounded-lg" value={newProxy.absentTeacher} onChange={e => setNewProxy({ ...newProxy, absentTeacher: e.target.value })} />
+                            <input type="text" placeholder="Proxy Teacher Name" className="p-2 border rounded-lg" value={newProxy.proxyTeacher} onChange={e => setNewProxy({ ...newProxy, proxyTeacher: e.target.value })} />
+                            <div className="grid grid-cols-2 gap-2">
+                                <input type="text" placeholder="Class/Sec" className="p-2 border rounded-lg" value={newProxy.classRoom} onChange={e => setNewProxy({ ...newProxy, classRoom: e.target.value })} />
+                                <input type="text" placeholder="Subject" className="p-2 border rounded-lg" value={newProxy.subject} onChange={e => setNewProxy({ ...newProxy, subject: e.target.value })} />
+                            </div>
+                            <button onClick={handleAssign} className="bg-blue-600 text-white font-bold py-2 rounded-lg mt-2">Assign Proxy</button>
+                        </div>
+                    )}
+
+                    <div className="space-y-3">
+                        {proxies.length === 0 ? (
+                            <p className="text-center text-slate-400 py-8">No proxy classes scheduled.</p>
+                        ) : (
+                            proxies.map(proxy => (
+                                <div key={proxy.id} className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm flex flex-col gap-2 relative overflow-hidden">
+                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"></div>
+                                    <div className="flex justify-between items-start">
+                                        <span className="bg-blue-50 text-blue-700 text-xs font-bold px-2 py-1 rounded">Date: {proxy.date}</span>
+                                        <span className="font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded text-xs">{proxy.classRoom}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <div className="flex-1">
+                                            <p className="text-xs text-slate-400">Substitute Teacher</p>
+                                            <p className="font-semibold text-slate-800">{proxy.proxyTeacher}</p>
+                                        </div>
+                                        <div className="text-slate-300">|</div>
+                                        <div className="flex-1">
+                                            <p className="text-xs text-slate-400">Replacing</p>
+                                            <p className="text-sm text-slate-600 line-through decoration-red-400">{proxy.absentTeacher}</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-sm text-slate-600 font-medium pt-2 border-t border-slate-50 mt-1">
+                                        Subject: {proxy.subject}
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        // ─── ISSUES TAB ────────────────────────────────────────
+        function IssuesTab({ profile }) {
+            const { data: medicalIssues, addDocument: addMed, updateDocument: updateMed } = usePublicCollection('medical');
+            const { data: maintIssues, addDocument: addMaint, updateDocument: updateMaint } = usePublicCollection('maintenance');
+
+            const [tab, setTab] = useState(profile.role === 'MAINTENANCE' ? 'maint' : 'med');
+            const [showForm, setShowForm] = useState(false);
+            const [newIssue, setNewIssue] = useState({ target: '', room: '', description: '' });
+
+            const isTeacher = profile.role === 'TEACHER';
+
+            const handleReport = () => {
+                if (newIssue.description) {
+                    if (tab === 'med') {
+                        addMed({ studentName: newIssue.target, room: newIssue.room, description: newIssue.description, reportedBy: profile.name, status: 'PENDING' });
+                    } else {
+                        addMaint({ location: newIssue.room, type: newIssue.target, description: newIssue.description, reportedBy: profile.name, status: 'PENDING' });
+                    }
+                    setShowForm(false);
+                    setNewIssue({ target: '', room: '', description: '' });
+                }
+            };
+
+            const activeData = tab === 'med' ? medicalIssues : maintIssues;
+
+            return (
+                <div className="space-y-4">
+                    <div className="flex bg-slate-200 p-1 rounded-xl mb-4">
+                        {(profile.role !== 'MAINTENANCE') && (
+                            <button
+                                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors ${tab === 'med' ? 'bg-white shadow text-red-600' : 'text-slate-500'}`}
+                                onClick={() => setTab('med')}
+                            >
+                                Medical Status
+                            </button>
+                        )}
+                        {(profile.role !== 'DOCTOR') && (
+                            <button
+                                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors ${tab === 'maint' ? 'bg-white shadow text-gray-700' : 'text-slate-500'}`}
+                                onClick={() => setTab('maint')}
+                            >
+                                Facility Issues
+                            </button>
+                        )}
+                    </div>
+
+                    {isTeacher && (
+                        <button onClick={() => setShowForm(!showForm)} className="w-full bg-blue-50 border border-blue-200 text-blue-700 font-semibold py-3 rounded-xl flex items-center justify-center gap-2 mb-4">
+                            <IconPlusCircle size={18} /> Report New {tab === 'med' ? 'Medical' : 'Facility'} Issue
+                        </button>
+                    )}
+
+                    {showForm && isTeacher && (
+                        <div className="bg-white p-4 rounded-xl shadow border border-slate-200 mb-6 space-y-3 animate-in">
+                            <input
+                                type="text"
+                                placeholder={tab === 'med' ? "Student Name / Roll" : "Issue Type (e.g. Electrical, Plumbing)"}
+                                className="w-full p-2 border rounded-lg text-sm bg-slate-50"
+                                value={newIssue.target}
+                                onChange={e => setNewIssue({ ...newIssue, target: e.target.value })}
+                            />
+                            <input
+                                type="text"
+                                placeholder={tab === 'med' ? "Class/Room Number" : "Location/Room Number"}
+                                className="w-full p-2 border rounded-lg text-sm bg-slate-50"
+                                value={newIssue.room}
+                                onChange={e => setNewIssue({ ...newIssue, room: e.target.value })}
+                            />
+                            <textarea
+                                placeholder="Describe the issue..."
+                                className="w-full p-2 border rounded-lg text-sm min-h-[80px] bg-slate-50"
+                                value={newIssue.description}
+                                onChange={e => setNewIssue({ ...newIssue, description: e.target.value })}
+                            />
+                            <button onClick={handleReport} className="w-full bg-blue-600 text-white font-bold py-2 rounded-lg">Submit Report</button>
+                        </div>
+                    )}
+
+                    <div className="space-y-3">
+                        {activeData.length === 0 && <p className="text-center text-slate-400 mt-8">No open issues.</p>}
+                        {activeData.map(item => (
+                            <div key={item.id} className={`bg-white p-4 rounded-xl shadow-sm border-l-4 ${item.status === 'RESOLVED' ? 'border-l-green-500 opacity-60' : (tab === 'med' ? 'border-l-red-500' : 'border-l-gray-600')} relative`}>
+                                <div className="flex justify-between items-start mb-2">
+                                    <h4 className="font-bold text-slate-800">{tab === 'med' ? item.studentName : item.type}</h4>
+                                    <span className={`text-[10px] px-2 py-1 rounded-full font-bold ${item.status === 'RESOLVED' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                                        {item.status}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-slate-500 mb-2">Location: <span className="font-semibold text-slate-700">{item.room || item.location}</span></p>
+                                <p className="text-sm text-slate-700 bg-slate-50 p-2 rounded-lg border border-slate-100 mb-2">{item.description}</p>
+                                <p className="text-[10px] text-slate-400 text-right">Reported by: {item.reportedBy}</p>
+
+                                {item.status !== 'RESOLVED' && (
+                                    (tab === 'med' && profile.role === 'DOCTOR') ||
+                                    (tab === 'maint' && profile.role === 'MAINTENANCE')
+                                ) && (
+                                    <button
+                                        onClick={() => tab === 'med' ? updateMed(item.id, { status: 'RESOLVED' }) : updateMaint(item.id, { status: 'RESOLVED' })}
+                                        className="mt-3 w-full bg-slate-800 text-white py-2 rounded-lg text-sm font-semibold flex justify-center items-center gap-2 hover:bg-slate-700"
+                                    >
+                                        <IconCheckCircle size={16} /> Mark Resolved
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        // ─── HELPER COMPONENTS ────────────────────────────────
+        function NavButton({ icon, label, active, onClick }) {
+            return (
+                <button
+                    onClick={onClick}
+                    className={`flex flex-col items-center justify-center w-16 gap-1 transition-colors ${active ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                    <div className={`${active ? 'bg-blue-100 p-1.5 rounded-xl' : 'p-1.5'}`}>
+                        {icon}
+                    </div>
+                    <span className={`text-[10px] font-semibold ${active ? 'opacity-100' : 'opacity-80'}`}>{label}</span>
+                </button>
+            );
+        }
+
+        function ActionCard({ icon, title, subtitle }) {
+            return (
+                <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-start gap-2 hover:shadow-md transition cursor-pointer">
+                    <div className="bg-slate-50 p-2 rounded-xl">
+                        {icon}
+                    </div>
+                    <div>
+                        <h4 className="font-bold text-slate-800 text-sm">{title}</h4>
+                        <p className="text-[10px] text-slate-500 mt-0.5">{subtitle}</p>
+                    </div>
+                </div>
+            );
+        }
+
+        // ─── RENDER ─────────────────────────────────────────────
+        const root = document.getElementById('root');
+        ReactDOM.createRoot(root).render(React.createElement(App));
+    </script>
+
+</body>
+</html>
