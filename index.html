@@ -18,18 +18,11 @@
       font-family: -apple-system, 'Inter', system-ui, sans-serif;
       margin: 0;
       min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
       color: #fff;
     }
     #root {
       width: 100%;
-      max-width: 420px;
-      margin: 0 auto;
       min-height: 100vh;
-      position: relative;
-      background: #0b0b0e;
     }
     .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0.75rem); }
     .animate-in { animation: fadeSlide 0.25s ease-out; }
@@ -37,21 +30,30 @@
       0% { opacity: 0; transform: translateY(8px); }
       100% { opacity: 1; transform: translateY(0); }
     }
-    .overflow-y-auto::-webkit-scrollbar { width: 3px; }
+    .overflow-y-auto::-webkit-scrollbar { width: 4px; }
     .overflow-y-auto::-webkit-scrollbar-thumb { background: #3a3a3f; border-radius: 12px; }
     .icon-svg { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .icon-svg svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .am-card { background: #1c1c1e; border-radius: 16px; transition: transform 0.15s ease; }
-    .am-card:active { transform: scale(0.97); }
+    .am-card:active { transform: scale(0.98); }
     .am-tab {
-      background: rgba(20, 20, 23, 0.85);
+      background: rgba(20, 20, 23, 0.9);
       backdrop-filter: saturate(180%) blur(20px);
       border-top: 1px solid rgba(255, 255, 255, 0.08);
     }
     .am-header {
-      background: rgba(11, 11, 14, 0.92);
+      background: rgba(11, 11, 14, 0.95);
       backdrop-filter: saturate(180%) blur(20px);
       border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    /* Desktop improvements */
+    @media (min-width: 768px) {
+      .app-container {
+        max-width: 900px;
+        margin: 0 auto;
+        border-left: 1px solid #2c2c2e;
+        border-right: 1px solid #2c2c2e;
+      }
     }
   </style>
 </head>
@@ -62,16 +64,14 @@
     const { useState, useEffect, useCallback } = React;
 
     // ────────────────────────────────────────────────
-    // ✅ YOUR SUPABASE KEYS (fixed)
+    // YOUR SUPABASE KEYS
     // ────────────────────────────────────────────────
     const SUPABASE_URL = 'https://qmbceqqodudvlhmgfgun.supabase.co';
-    const SUPABASE_ANON_KEY = 'PASTE_YOUR_FULL_ANON_KEY_HERE';   // ← paste the long key here
+    const SUPABASE_ANON_KEY = 'PASTE_YOUR_FULL_ANON_KEY_HERE';
 
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // ────────────────────────────────────────────────
     // Icons
-    // ────────────────────────────────────────────────
     const IconHome = ({ size, className }) => <span className={`icon-svg ${className || ''}`}><svg viewBox="0 0 24 24" width={size || 20} height={size || 20}><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg></span>;
     const IconClipboard = ({ size, className }) => <span className={`icon-svg ${className || ''}`}><svg viewBox="0 0 24 24" width={size || 20} height={size || 20}><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /><path d="M9 13l2 2 4-4" /></svg></span>;
     const IconCalendar = ({ size, className }) => <span className={`icon-svg ${className || ''}`}><svg viewBox="0 0 24 24" width={size || 20} height={size || 20}><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg></span>;
@@ -84,16 +84,7 @@
     const IconAlertCircle = ({ size, className }) => <span className={`icon-svg ${className || ''}`}><svg viewBox="0 0 24 24" width={size || 20} height={size || 20}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg></span>;
     const IconFileText = ({ size, className }) => <span className={`icon-svg ${className || ''}`}><svg viewBox="0 0 24 24" width={size || 20} height={size || 20}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg></span>;
     const IconBell = ({ size, className }) => <span className={`icon-svg ${className || ''}`}><svg viewBox="0 0 24 24" width={size || 20} height={size || 20}><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 01-3.46 0" /></svg></span>;
-
-    // Mock credentials
-    const MOCK_CREDENTIALS = {
-      'admin': { role: 'ADMIN', name: 'Head of Dept', pass: '123' },
-      't1': { role: 'TEACHER', name: 'Mr. Rahman (Maths)', pass: '123' },
-      't2': { role: 'TEACHER', name: 'Mr. Khan (Physics)', pass: '123' },
-      'doc': { role: 'DOCTOR', name: 'Dr. Ali', pass: '123' },
-      'maint': { role: 'MAINTENANCE', name: 'Campus Facilities', pass: '123' },
-      'stu1': { role: 'STUDENT', name: 'Ahmad Abdullah', class: 'Class 10-A', reg: 'BAN-2023-1042', pass: '123' },
-    };
+    const IconUsers = ({ size, className }) => <span className={`icon-svg ${className || ''}`}><svg viewBox="0 0 24 24" width={size || 20} height={size || 20}><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" /></svg></span>;
 
     // Custom hook
     function usePublicCollection(tableName) {
@@ -105,12 +96,8 @@
           .from(tableName)
           .select('*')
           .order('created_at', { ascending: false });
-
-        if (error) {
-          console.error(`Error fetching ${tableName}:`, error);
-        } else {
-          setData(rows || []);
-        }
+        if (error) console.error(error);
+        else setData(rows || []);
         setLoading(false);
       }, [tableName]);
 
@@ -118,22 +105,20 @@
         fetchData();
         const channel = supabase
           .channel(`public:${tableName}`)
-          .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, () => {
-            fetchData();
-          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, fetchData)
           .subscribe();
         return () => supabase.removeChannel(channel);
       }, [tableName, fetchData]);
 
       const addDocument = useCallback(async (docData) => {
         const { error } = await supabase.from(tableName).insert([docData]);
-        if (error) console.error('Insert error:', error);
+        if (error) console.error(error);
         else fetchData();
       }, [tableName, fetchData]);
 
       const updateDocument = useCallback(async (docId, updateData) => {
         const { error } = await supabase.from(tableName).update(updateData).eq('id', docId);
-        if (error) console.error('Update error:', error);
+        if (error) console.error(error);
         else fetchData();
       }, [tableName, fetchData]);
 
@@ -144,14 +129,27 @@
     function App() {
       const [appProfile, setAppProfile] = useState(null);
       const [activeTab, setActiveTab] = useState('home');
+      const [showRegister, setShowRegister] = useState(false);
 
-      const handleLogin = (username, password) => {
-        const user = MOCK_CREDENTIALS[username];
-        if (user && user.pass === password) {
-          setAppProfile({ ...user, id: username });
-        } else {
-          alert("Invalid credentials. Use demo accounts (e.g. admin / 123)");
+      const handleLogin = async (username, password) => {
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('username', username)
+          .eq('password', password)
+          .single();
+
+        if (error || !data) {
+          alert('Invalid username or password');
+          return;
         }
+        setAppProfile({
+          id: data.username,
+          name: data.full_name,
+          role: data.role,
+          class: data.class,
+          reg: data.reg
+        });
       };
 
       const handleLogout = () => {
@@ -160,18 +158,25 @@
       };
 
       if (!appProfile) {
-        return <LoginScreen onLogin={handleLogin} />;
+        return showRegister
+          ? <RegisterScreen onBack={() => setShowRegister(false)} onSuccess={() => setShowRegister(false)} />
+          : <LoginScreen onLogin={handleLogin} onRegister={() => setShowRegister(true)} />;
       }
 
       return (
-        <div className="flex flex-col h-screen bg-[#0b0b0e] text-white font-sans max-w-md mx-auto relative overflow-hidden">
-          <header className="am-header px-5 py-4 flex justify-between items-center z-10">
+        <div className="app-container flex flex-col min-h-screen bg-[#0b0b0e] text-white">
+          {/* Header */}
+          <header className="am-header px-4 sm:px-6 py-4 flex justify-between items-center sticky top-0 z-20">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Bes An Noor</h1>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Bes An Noor</h1>
               <p className="text-xs text-[#8e8e93]">Model School · Boys' Unit</p>
             </div>
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-[#2c2c2e] flex items-center justify-center overflow-hidden border border-[#3a3a3c]">
+              <div className="hidden sm:block text-right">
+                <p className="text-sm font-medium">{appProfile.name}</p>
+                <p className="text-xs text-[#8e8e93]">{appProfile.role}</p>
+              </div>
+              <div className="w-9 h-9 rounded-full bg-[#2c2c2e] flex items-center justify-center border border-[#3a3a3c]">
                 <IconUser size={18} className="text-[#8e8e93]" />
               </div>
               <button onClick={handleLogout} className="p-1.5 rounded-full bg-[#2c2c2e] hover:bg-[#3a3a3c] transition">
@@ -180,72 +185,147 @@
             </div>
           </header>
 
-          <main className="flex-1 overflow-y-auto px-4 pb-28 pt-2">
-            {activeTab === 'home' && <HomeTab profile={appProfile} />}
+          {/* Main Content */}
+          <main className="flex-1 overflow-y-auto px-4 sm:px-6 pb-28 pt-4">
+            {activeTab === 'home' && <HomeTab profile={appProfile} setActiveTab={setActiveTab} />}
             {activeTab === 'notices' && <NoticesTab profile={appProfile} />}
             {activeTab === 'schedule' && <ScheduleTab profile={appProfile} />}
             {activeTab === 'issues' && <IssuesTab profile={appProfile} />}
+            {activeTab === 'users' && appProfile.role === 'ADMIN' && <UsersTab />}
           </main>
 
-          <nav className="am-tab absolute bottom-0 w-full flex justify-around items-center px-2 py-2 pb-safe z-20">
+          {/* Bottom Navigation */}
+          <nav className="am-tab fixed bottom-0 left-0 right-0 flex justify-around items-center px-2 py-2 pb-safe z-20 max-w-[900px] mx-auto">
             <TabButton icon={<IconHome />} label="Home" active={activeTab === 'home'} onClick={() => setActiveTab('home')} />
             <TabButton icon={<IconClipboard />} label="Notices" active={activeTab === 'notices'} onClick={() => setActiveTab('notices')} />
             <TabButton icon={<IconCalendar />} label="Proxy" active={activeTab === 'schedule'} onClick={() => setActiveTab('schedule')} />
             {['TEACHER', 'DOCTOR', 'MAINTENANCE'].includes(appProfile.role) && (
               <TabButton icon={<IconAlertCircle />} label="Issues" active={activeTab === 'issues'} onClick={() => setActiveTab('issues')} />
             )}
+            {appProfile.role === 'ADMIN' && (
+              <TabButton icon={<IconUsers />} label="Users" active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
+            )}
           </nav>
         </div>
       );
     }
 
-    function LoginScreen({ onLogin }) {
+    // Login Screen
+    function LoginScreen({ onLogin, onRegister }) {
       const [id, setId] = useState('');
       const [pass, setPass] = useState('');
 
       return (
-        <div className="flex flex-col h-screen bg-[#0b0b0e] max-w-md mx-auto p-6 justify-center text-white">
-          <div className="text-center mb-12">
-            <div className="w-24 h-24 mx-auto rounded-3xl bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center shadow-2xl mb-6">
-              <IconUser size={48} className="text-white" />
+        <div className="min-h-screen flex items-center justify-center p-4 bg-[#0b0b0e]">
+          <div className="w-full max-w-md">
+            <div className="text-center mb-10">
+              <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center shadow-2xl mb-5">
+                <IconUser size={40} className="text-white" />
+              </div>
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Bes An Noor</h1>
+              <p className="text-[#8e8e93] mt-1 text-base">School Portal</p>
             </div>
-            <h1 className="text-4xl font-bold tracking-tight">Bes An Noor</h1>
-            <p className="text-[#8e8e93] mt-2 text-sm">Boys' Unit · School Portal</p>
-          </div>
 
-          <div className="bg-[#1c1c1e] rounded-2xl p-6 shadow-xl">
-            <h2 className="text-lg font-semibold mb-4 text-[#f5f5f7]">Sign In</h2>
+            <div className="bg-[#1c1c1e] rounded-2xl p-6 shadow-xl">
+              <h2 className="text-lg font-semibold mb-5 text-[#f5f5f7]">Sign In</h2>
+              <input
+                type="text"
+                placeholder="Login ID"
+                className="w-full p-3.5 mb-4 bg-[#2c2c2e] border border-[#3a3a3c] rounded-xl text-white placeholder-[#8e8e93] focus:outline-none focus:ring-2 focus:ring-red-500"
+                value={id}
+                onChange={(e) => setId(e.target.value)}
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                className="w-full p-3.5 mb-6 bg-[#2c2c2e] border border-[#3a3a3c] rounded-xl text-white placeholder-[#8e8e93] focus:outline-none focus:ring-2 focus:ring-red-500"
+                value={pass}
+                onChange={(e) => setPass(e.target.value)}
+              />
+              <button
+                onClick={() => onLogin(id, pass)}
+                className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold p-3.5 rounded-xl hover:opacity-90 transition shadow-lg"
+              >
+                Continue
+              </button>
+            </div>
+
+            <div className="mt-6 text-center">
+              <button onClick={onRegister} className="text-red-400 text-sm font-medium hover:underline">
+                Create Teacher / Staff Account
+              </button>
+            </div>
+
+            <div className="mt-8 text-sm text-[#8e8e93] bg-[#1c1c1e] p-4 rounded-xl border border-[#2c2c2e]">
+              <p className="font-semibold text-[#f5f5f7] mb-2">Default Admin</p>
+              <p className="text-xs">Username: <b>admin</b> &nbsp; Password: <b>123</b></p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Register Screen
+    function RegisterScreen({ onBack, onSuccess }) {
+      const [form, setForm] = useState({
+        username: '', password: '', full_name: '', role: 'TEACHER'
+      });
+
+      const handleRegister = async () => {
+        if (!form.username || !form.password || !form.full_name) {
+          alert('Please fill all fields');
+          return;
+        }
+        const { error } = await supabase.from('users').insert([{
+          username: form.username,
+          password: form.password,
+          full_name: form.full_name,
+          role: form.role
+        }]);
+        if (error) {
+          alert(error.message.includes('duplicate') ? 'Username already exists' : error.message);
+        } else {
+          alert('Account created successfully! Please login.');
+          onSuccess();
+        }
+      };
+
+      return (
+        <div className="min-h-screen flex items-center justify-center p-4 bg-[#0b0b0e]">
+          <div className="w-full max-w-md bg-[#1c1c1e] rounded-2xl p-6 shadow-xl">
+            <h2 className="text-xl font-bold mb-6">Create Account</h2>
             <input
-              type="text"
-              placeholder="Login ID (admin, t1, stu1)"
-              className="w-full p-3 mb-4 bg-[#2c2c2e] border border-[#3a3a3c] rounded-xl text-white placeholder-[#8e8e93] focus:outline-none focus:ring-2 focus:ring-red-500"
-              value={id}
-              onChange={(e) => setId(e.target.value)}
+              type="text" placeholder="Full Name"
+              className="w-full p-3 mb-3 bg-[#2c2c2e] border border-[#3a3a3c] rounded-xl text-white"
+              value={form.full_name}
+              onChange={e => setForm({...form, full_name: e.target.value})}
             />
             <input
-              type="password"
-              placeholder="Password (123)"
-              className="w-full p-3 mb-6 bg-[#2c2c2e] border border-[#3a3a3c] rounded-xl text-white placeholder-[#8e8e93] focus:outline-none focus:ring-2 focus:ring-red-500"
-              value={pass}
-              onChange={(e) => setPass(e.target.value)}
+              type="text" placeholder="Login ID (username)"
+              className="w-full p-3 mb-3 bg-[#2c2c2e] border border-[#3a3a3c] rounded-xl text-white"
+              value={form.username}
+              onChange={e => setForm({...form, username: e.target.value})}
             />
-            <button
-              onClick={() => onLogin(id, pass)}
-              className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold p-3 rounded-xl hover:opacity-90 transition shadow-lg"
+            <input
+              type="password" placeholder="Password"
+              className="w-full p-3 mb-3 bg-[#2c2c2e] border border-[#3a3a3c] rounded-xl text-white"
+              value={form.password}
+              onChange={e => setForm({...form, password: e.target.value})}
+            />
+            <select
+              className="w-full p-3 mb-6 bg-[#2c2c2e] border border-[#3a3a3c] rounded-xl text-white"
+              value={form.role}
+              onChange={e => setForm({...form, role: e.target.value})}
             >
-              Continue
+              <option value="TEACHER">Teacher</option>
+              <option value="DOCTOR">Doctor</option>
+              <option value="MAINTENANCE">Maintenance</option>
+              <option value="ADMIN">Admin</option>
+            </select>
+            <button onClick={handleRegister} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold p-3 rounded-xl mb-3">
+              Create Account
             </button>
-          </div>
-
-          <div className="mt-8 text-sm text-[#8e8e93] bg-[#1c1c1e] p-4 rounded-xl border border-[#2c2c2e]">
-            <p className="font-semibold text-[#f5f5f7] mb-2">Demo Accounts (pass: 123)</p>
-            <ul className="grid grid-cols-2 gap-1 text-xs">
-              <li><b>admin</b> (Head)</li>
-              <li><b>t1</b> (Teacher)</li>
-              <li><b>doc</b> (Doctor)</li>
-              <li><b>maint</b> (Facility)</li>
-              <li><b>stu1</b> (Student)</li>
-            </ul>
+            <button onClick={onBack} className="w-full text-[#8e8e93] text-sm">Back to Login</button>
           </div>
         </div>
       );
@@ -263,66 +343,116 @@
       );
     }
 
-    function HomeTab({ profile }) {
-      if (profile.role === 'STUDENT') {
+    // Home Tab
+    function HomeTab({ profile, setActiveTab }) {
+      const { data: attendance } = usePublicCollection('attendance');
+      const { data: proxies } = usePublicCollection('proxies');
+      const today = new Date().toISOString().split('T')[0];
+
+      // For Admin - all teachers attendance
+      const todayAttendance = attendance.filter(a => a.date === today);
+
+      // For Teacher - proxies assigned to them
+      const myProxies = proxies.filter(p => 
+        p.proxy_teacher?.toLowerCase().includes(profile.name.toLowerCase()) || 
+        p.proxy_teacher?.toLowerCase() === profile.id.toLowerCase()
+      );
+
+      if (profile.role === 'ADMIN') {
         return (
           <div className="space-y-6">
-            <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-red-600 to-pink-600 p-6 shadow-2xl">
-              <div className="absolute right-0 top-0 w-32 h-32 rounded-full bg-white/10 blur-2xl -translate-y-1/2 translate-x-1/2"></div>
-              <div className="relative z-10 flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center border-2 border-white/30">
-                  <IconUser size={32} className="text-white" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold">{profile.name}</h2>
-                  <p className="text-sm text-white/80">{profile.class}</p>
-                  <p className="text-xs text-white/60 mt-1 font-mono">{profile.reg}</p>
-                </div>
+            <div className="am-card p-5 flex items-center gap-4">
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center">
+                <IconUser size={24} className="text-white" />
+              </div>
+              <div>
+                <h2 className="font-bold text-lg">Welcome, {profile.name}</h2>
+                <p className="text-[#8e8e93] text-sm">Administrator Dashboard</p>
               </div>
             </div>
-            <h3 className="font-semibold text-[#f5f5f7] ml-1 text-lg">Quick Actions</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <ActionCard icon={<IconClipboard className="text-orange-400" />} title="Notices" subtitle="Important updates" />
-              <ActionCard icon={<IconCalendar className="text-blue-400" />} title="Routine" subtitle="Today's schedule" />
+
+            {/* All Teachers Attendance */}
+            <div>
+              <h3 className="font-semibold text-lg mb-3">Today's Attendance</h3>
+              <div className="am-card p-4">
+                {todayAttendance.length === 0 ? (
+                  <p className="text-[#8e8e93] text-sm">No attendance marked yet today.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {todayAttendance.map(a => (
+                      <div key={a.id} className="flex justify-between items-center py-2 border-b border-[#2c2c2e] last:border-0">
+                        <span className="text-sm">{a.name || a.teacher_id}</span>
+                        <span className={`text-xs px-2 py-1 rounded-full ${a.status === 'PRESENT' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                          {a.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div>
+              <h3 className="font-semibold text-lg mb-3">Quick Actions</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <ActionCard icon={<IconCalendar className="text-blue-400" />} title="Add Proxy" subtitle="Assign teacher" onClick={() => setActiveTab('schedule')} />
+                <ActionCard icon={<IconBell className="text-orange-400" />} title="Post Notice" subtitle="Announcement" onClick={() => setActiveTab('notices')} />
+                <ActionCard icon={<IconUsers className="text-purple-400" />} title="Manage Users" subtitle="Add teachers" onClick={() => setActiveTab('users')} />
+              </div>
             </div>
           </div>
         );
       }
 
+      // Teacher / Others
       return (
         <div className="space-y-6">
-          <div className="am-card p-5 flex items-center gap-4 shadow-md">
-            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center shadow-lg">
+          <div className="am-card p-5 flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center">
               <IconUser size={24} className="text-white" />
             </div>
             <div>
-              <h2 className="font-bold text-lg text-[#f5f5f7]">Welcome back,</h2>
-              <p className="text-[#8e8e93] text-sm">{profile.name}</p>
+              <h2 className="font-bold text-lg">Welcome, {profile.name}</h2>
+              <p className="text-[#8e8e93] text-sm">{profile.role}</p>
             </div>
           </div>
 
-          <TeacherAttendance profile={profile} />
+          {['TEACHER', 'ADMIN'].includes(profile.role) && (
+            <TeacherAttendance profile={profile} />
+          )}
 
-          <h3 className="font-semibold text-[#f5f5f7] ml-1 text-lg mt-6">Overview</h3>
-          <div className="grid grid-cols-2 gap-4">
-            {profile.role === 'ADMIN' && (
-              <>
-                <ActionCard icon={<IconCalendar className="text-blue-400" />} title="Proxy" subtitle="Assign teachers" />
-                <ActionCard icon={<IconBell className="text-orange-400" />} title="Notice" subtitle="Post announcement" />
-              </>
-            )}
-            {profile.role === 'TEACHER' && (
-              <>
-                <ActionCard icon={<IconStethoscope className="text-red-400" />} title="Medical" subtitle="Report issue" />
-                <ActionCard icon={<IconWrench className="text-gray-400" />} title="Facility" subtitle="Report repair" />
-              </>
-            )}
-            {profile.role === 'DOCTOR' && (
-              <ActionCard icon={<IconStethoscope className="text-red-400" />} title="Medical Queue" subtitle="Pending cases" />
-            )}
-            {profile.role === 'MAINTENANCE' && (
-              <ActionCard icon={<IconWrench className="text-gray-400" />} title="Work Orders" subtitle="Repairs needed" />
-            )}
+          {/* Proxies for this teacher */}
+          {profile.role === 'TEACHER' && myProxies.length > 0 && (
+            <div>
+              <h3 className="font-semibold text-lg mb-3">Your Proxy Classes</h3>
+              <div className="space-y-3">
+                {myProxies.map(p => (
+                  <div key={p.id} className="am-card p-4 border-l-4 border-l-blue-500">
+                    <div className="flex justify-between">
+                      <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full">{p.date}</span>
+                      <span className="text-xs bg-[#2c2c2e] px-2 py-1 rounded-full">{p.class_room}</span>
+                    </div>
+                    <p className="mt-2 font-medium">{p.subject}</p>
+                    <p className="text-xs text-[#8e8e93]">Replacing: {p.absent_teacher}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div>
+            <h3 className="font-semibold text-lg mb-3">Quick Actions</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <ActionCard icon={<IconClipboard className="text-orange-400" />} title="Notices" subtitle="View updates" onClick={() => setActiveTab('notices')} />
+              <ActionCard icon={<IconCalendar className="text-blue-400" />} title="Proxy" subtitle="Schedule" onClick={() => setActiveTab('schedule')} />
+              {profile.role === 'TEACHER' && (
+                <>
+                  <ActionCard icon={<IconStethoscope className="text-red-400" />} title="Medical" subtitle="Report issue" onClick={() => setActiveTab('issues')} />
+                  <ActionCard icon={<IconWrench className="text-gray-400" />} title="Facility" subtitle="Report repair" onClick={() => setActiveTab('issues')} />
+                </>
+              )}
+            </div>
           </div>
         </div>
       );
@@ -344,24 +474,19 @@
         }
       };
 
-      if (!['TEACHER', 'ADMIN'].includes(profile.role)) return null;
-
       return (
-        <div className="am-card p-5 shadow-md">
+        <div className="am-card p-5">
           <div className="flex justify-between items-center">
             <div>
-              <h3 className="font-bold text-[#f5f5f7]">Daily Attendance</h3>
+              <h3 className="font-bold">Daily Attendance</h3>
               <p className="text-sm text-[#8e8e93]">{new Date().toDateString()}</p>
             </div>
             {myAttendanceToday ? (
-              <div className="flex items-center gap-1 text-green-400 bg-green-500/10 px-3 py-1.5 rounded-full font-medium text-sm border border-green-500/20">
+              <div className="flex items-center gap-1 text-green-400 bg-green-500/10 px-3 py-1.5 rounded-full text-sm border border-green-500/20">
                 <IconCheckCircle size={16} /> Present
               </div>
             ) : (
-              <button
-                onClick={markAttendance}
-                className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-5 py-2 rounded-full text-sm font-semibold shadow-md transition hover:opacity-90"
-              >
+              <button onClick={markAttendance} className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-5 py-2 rounded-full text-sm font-semibold">
                 Mark Present
               </button>
             )}
@@ -370,6 +495,7 @@
       );
     }
 
+    // Notices Tab
     function NoticesTab({ profile }) {
       const { data: notices, addDocument } = usePublicCollection('notices');
       const [showForm, setShowForm] = useState(false);
@@ -385,61 +511,37 @@
 
       return (
         <div className="space-y-5">
-          <div className="flex justify-between items-center mb-2">
-            <h2 className="text-2xl font-bold text-[#f5f5f7]">Notices</h2>
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold">Notices</h2>
             {profile.role === 'ADMIN' && (
               <button onClick={() => setShowForm(!showForm)} className="text-red-500 bg-red-500/10 p-2 rounded-full">
-                {showForm ? <IconLogOut size={20} className="rotate-45" /> : <IconPlusCircle size={24} />}
+                <IconPlusCircle size={24} />
               </button>
             )}
           </div>
 
           {showForm && (
-            <div className="am-card p-4 border border-[#2c2c2e] mb-4 animate-in">
-              <input
-                type="text"
-                placeholder="Notice Title"
-                className="w-full p-2 mb-3 bg-[#2c2c2e] border-b border-[#3a3a3c] focus:outline-none focus:border-red-500 text-white placeholder-[#8e8e93] font-medium"
-                value={newNotice.title}
-                onChange={e => setNewNotice({ ...newNotice, title: e.target.value })}
-              />
-              <select
-                className="w-full p-2 mb-3 bg-[#2c2c2e] rounded-lg text-sm border border-[#3a3a3c] text-white"
-                value={newNotice.type}
-                onChange={e => setNewNotice({ ...newNotice, type: e.target.value })}
-              >
+            <div className="am-card p-4 animate-in">
+              <input type="text" placeholder="Notice Title" className="w-full p-2 mb-3 bg-[#2c2c2e] border-b border-[#3a3a3c] text-white" value={newNotice.title} onChange={e => setNewNotice({...newNotice, title: e.target.value})} />
+              <select className="w-full p-2 mb-3 bg-[#2c2c2e] rounded-lg text-sm border border-[#3a3a3c] text-white" value={newNotice.type} onChange={e => setNewNotice({...newNotice, type: e.target.value})}>
                 <option value="text">Text</option>
                 <option value="image">Image (URL)</option>
                 <option value="pdf">PDF (Link)</option>
               </select>
-              <textarea
-                placeholder={newNotice.type === 'text' ? "Write notice content..." : "Paste URL here..."}
-                className="w-full p-3 bg-[#2c2c2e] rounded-xl mb-3 text-sm min-h-[80px] border border-[#3a3a3c] text-white placeholder-[#8e8e93]"
-                value={newNotice.content}
-                onChange={e => setNewNotice({ ...newNotice, content: e.target.value })}
-              />
+              <textarea placeholder="Content..." className="w-full p-3 bg-[#2c2c2e] rounded-xl mb-3 text-sm min-h-[80px] border border-[#3a3a3c] text-white" value={newNotice.content} onChange={e => setNewNotice({...newNotice, content: e.target.value})} />
               <button onClick={handlePost} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-2 rounded-xl">Publish</button>
             </div>
           )}
 
-          {notices.length === 0 && <p className="text-center text-[#8e8e93] mt-10">No notices yet.</p>}
-
+          {notices.length === 0 && <p className="text-center text-[#8e8e93] py-10">No notices yet.</p>}
           <div className="space-y-4">
-            {notices.map(notice => (
-              <div key={notice.id} className="am-card p-5 border-l-4 border-l-red-500 shadow-md">
-                <h3 className="font-bold text-[#f5f5f7] mb-1">{notice.title}</h3>
-                <p className="text-xs text-[#8e8e93] mb-3">Posted by {notice.author}</p>
-                {notice.type === 'text' && <p className="text-sm text-[#e5e5ea] whitespace-pre-wrap">{notice.content}</p>}
-                {notice.type === 'image' && (
-                  <div className="mt-2 rounded-xl overflow-hidden bg-[#1c1c1e] flex items-center justify-center">
-                    <img src={notice.content} alt={notice.title} className="max-w-full h-auto object-contain max-h-48" onError={(e) => { e.target.onerror = null; e.target.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22200%22%3E%3Crect fill=%22%232c2c2e%22 width=%22400%22 height=%22200%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%238e8e93%22 font-family=%22sans-serif%22 font-size=%2220%22%3EImage%20unavailable%3C/text%3E%3C/svg%3E' }} />
-                  </div>
-                )}
-                {notice.type === 'pdf' && (
-                  <a href={notice.content} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-red-400 bg-red-500/10 p-3 rounded-xl mt-2 text-sm font-medium hover:bg-red-500/20 transition">
-                    <IconFileText size={18} /> View PDF Document
-                  </a>
-                )}
+            {notices.map(n => (
+              <div key={n.id} className="am-card p-5 border-l-4 border-l-red-500">
+                <h3 className="font-bold mb-1">{n.title}</h3>
+                <p className="text-xs text-[#8e8e93] mb-3">Posted by {n.author}</p>
+                {n.type === 'text' && <p className="text-sm text-[#e5e5ea] whitespace-pre-wrap">{n.content}</p>}
+                {n.type === 'image' && <img src={n.content} alt={n.title} className="max-w-full rounded-xl max-h-48 object-contain mt-2" />}
+                {n.type === 'pdf' && <a href={n.content} target="_blank" className="flex items-center gap-2 text-red-400 bg-red-500/10 p-3 rounded-xl mt-2 text-sm"><IconFileText size={18} /> View PDF</a>}
               </div>
             ))}
           </div>
@@ -447,6 +549,7 @@
       );
     }
 
+    // Schedule / Proxy Tab
     function ScheduleTab({ profile }) {
       const { data: proxies, addDocument } = usePublicCollection('proxies');
       const [showForm, setShowForm] = useState(false);
@@ -462,9 +565,9 @@
 
       return (
         <div className="space-y-5">
-          <div className="flex justify-between items-center mb-2">
+          <div className="flex justify-between items-center">
             <div>
-              <h2 className="text-2xl font-bold text-[#f5f5f7]">Proxy Schedule</h2>
+              <h2 className="text-2xl font-bold">Proxy Schedule</h2>
               <p className="text-sm text-[#8e8e93]">Substitution roster</p>
             </div>
             {profile.role === 'ADMIN' && (
@@ -475,15 +578,15 @@
           </div>
 
           {showForm && profile.role === 'ADMIN' && (
-            <div className="am-card p-4 border border-[#2c2c2e] mb-4 grid gap-3 text-sm animate-in">
-              <input type="date" className="p-2 bg-[#2c2c2e] border border-[#3a3a3c] rounded-lg text-white" value={newProxy.date} onChange={e => setNewProxy({ ...newProxy, date: e.target.value })} />
-              <input type="text" placeholder="Absent Teacher" className="p-2 bg-[#2c2c2e] border border-[#3a3a3c] rounded-lg text-white placeholder-[#8e8e93]" value={newProxy.absent_teacher} onChange={e => setNewProxy({ ...newProxy, absent_teacher: e.target.value })} />
-              <input type="text" placeholder="Proxy Teacher" className="p-2 bg-[#2c2c2e] border border-[#3a3a3c] rounded-lg text-white placeholder-[#8e8e93]" value={newProxy.proxy_teacher} onChange={e => setNewProxy({ ...newProxy, proxy_teacher: e.target.value })} />
+            <div className="am-card p-4 grid gap-3 text-sm animate-in">
+              <input type="date" className="p-2 bg-[#2c2c2e] border border-[#3a3a3c] rounded-lg text-white" value={newProxy.date} onChange={e => setNewProxy({...newProxy, date: e.target.value})} />
+              <input type="text" placeholder="Absent Teacher" className="p-2 bg-[#2c2c2e] border border-[#3a3a3c] rounded-lg text-white" value={newProxy.absent_teacher} onChange={e => setNewProxy({...newProxy, absent_teacher: e.target.value})} />
+              <input type="text" placeholder="Proxy Teacher (name or ID)" className="p-2 bg-[#2c2c2e] border border-[#3a3a3c] rounded-lg text-white" value={newProxy.proxy_teacher} onChange={e => setNewProxy({...newProxy, proxy_teacher: e.target.value})} />
               <div className="grid grid-cols-2 gap-2">
-                <input type="text" placeholder="Class/Sec" className="p-2 bg-[#2c2c2e] border border-[#3a3a3c] rounded-lg text-white placeholder-[#8e8e93]" value={newProxy.class_room} onChange={e => setNewProxy({ ...newProxy, class_room: e.target.value })} />
-                <input type="text" placeholder="Subject" className="p-2 bg-[#2c2c2e] border border-[#3a3a3c] rounded-lg text-white placeholder-[#8e8e93]" value={newProxy.subject} onChange={e => setNewProxy({ ...newProxy, subject: e.target.value })} />
+                <input type="text" placeholder="Class/Sec" className="p-2 bg-[#2c2c2e] border border-[#3a3a3c] rounded-lg text-white" value={newProxy.class_room} onChange={e => setNewProxy({...newProxy, class_room: e.target.value})} />
+                <input type="text" placeholder="Subject" className="p-2 bg-[#2c2c2e] border border-[#3a3a3c] rounded-lg text-white" value={newProxy.subject} onChange={e => setNewProxy({...newProxy, subject: e.target.value})} />
               </div>
-              <button onClick={handleAssign} className="bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-2 rounded-lg mt-2">Assign</button>
+              <button onClick={handleAssign} className="bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-2 rounded-lg">Assign Proxy</button>
             </div>
           )}
 
@@ -492,15 +595,15 @@
               <p className="text-center text-[#8e8e93] py-8">No proxy classes scheduled.</p>
             ) : (
               proxies.map(proxy => (
-                <div key={proxy.id} className="am-card p-4 shadow-md relative overflow-hidden border-l-4 border-l-red-500">
+                <div key={proxy.id} className="am-card p-4 border-l-4 border-l-red-500">
                   <div className="flex justify-between items-start">
-                    <span className="bg-red-500/20 text-red-400 text-xs font-bold px-2 py-1 rounded-full">Date: {proxy.date}</span>
-                    <span className="font-bold text-[#f5f5f7] bg-[#2c2c2e] px-2 py-1 rounded-full text-xs">{proxy.class_room}</span>
+                    <span className="bg-red-500/20 text-red-400 text-xs font-bold px-2 py-1 rounded-full">{proxy.date}</span>
+                    <span className="font-bold text-xs bg-[#2c2c2e] px-2 py-1 rounded-full">{proxy.class_room}</span>
                   </div>
                   <div className="flex items-center gap-3 mt-3">
                     <div className="flex-1">
                       <p className="text-xs text-[#8e8e93]">Substitute</p>
-                      <p className="font-semibold text-[#f5f5f7]">{proxy.proxy_teacher}</p>
+                      <p className="font-semibold">{proxy.proxy_teacher}</p>
                     </div>
                     <div className="text-[#3a3a3c]">|</div>
                     <div className="flex-1">
@@ -508,9 +611,7 @@
                       <p className="text-sm text-[#8e8e93] line-through decoration-red-400">{proxy.absent_teacher}</p>
                     </div>
                   </div>
-                  <div className="text-sm text-[#e5e5ea] font-medium pt-2 border-t border-[#2c2c2e] mt-2">
-                    Subject: {proxy.subject}
-                  </div>
+                  <div className="text-sm pt-2 border-t border-[#2c2c2e] mt-2">Subject: {proxy.subject}</div>
                 </div>
               ))
             )}
@@ -519,10 +620,10 @@
       );
     }
 
+    // Issues Tab
     function IssuesTab({ profile }) {
       const { data: medicalIssues, addDocument: addMed, updateDocument: updateMed } = usePublicCollection('medical');
       const { data: maintIssues, addDocument: addMaint, updateDocument: updateMaint } = usePublicCollection('maintenance');
-
       const [tab, setTab] = useState(profile.role === 'MAINTENANCE' ? 'maint' : 'med');
       const [showForm, setShowForm] = useState(false);
       const [newIssue, setNewIssue] = useState({ target: '', room: '', description: '' });
@@ -532,21 +633,9 @@
       const handleReport = () => {
         if (newIssue.description) {
           if (tab === 'med') {
-            addMed({
-              student_name: newIssue.target,
-              room: newIssue.room,
-              description: newIssue.description,
-              reported_by: profile.name,
-              status: 'PENDING'
-            });
+            addMed({ student_name: newIssue.target, room: newIssue.room, description: newIssue.description, reported_by: profile.name, status: 'PENDING' });
           } else {
-            addMaint({
-              location: newIssue.room,
-              type: newIssue.target,
-              description: newIssue.description,
-              reported_by: profile.name,
-              status: 'PENDING'
-            });
+            addMaint({ location: newIssue.room, type: newIssue.target, description: newIssue.description, reported_by: profile.name, status: 'PENDING' });
           }
           setShowForm(false);
           setNewIssue({ target: '', room: '', description: '' });
@@ -557,22 +646,12 @@
 
       return (
         <div className="space-y-5">
-          <div className="flex bg-[#1c1c1e] p-1 rounded-xl mb-2">
-            {(profile.role !== 'MAINTENANCE') && (
-              <button
-                className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${tab === 'med' ? 'bg-[#2c2c2e] text-white' : 'text-[#8e8e93]'}`}
-                onClick={() => setTab('med')}
-              >
-                Medical
-              </button>
+          <div className="flex bg-[#1c1c1e] p-1 rounded-xl">
+            {profile.role !== 'MAINTENANCE' && (
+              <button className={`flex-1 py-2 text-sm font-medium rounded-lg ${tab === 'med' ? 'bg-[#2c2c2e] text-white' : 'text-[#8e8e93]'}`} onClick={() => setTab('med')}>Medical</button>
             )}
-            {(profile.role !== 'DOCTOR') && (
-              <button
-                className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${tab === 'maint' ? 'bg-[#2c2c2e] text-white' : 'text-[#8e8e93]'}`}
-                onClick={() => setTab('maint')}
-              >
-                Facility
-              </button>
+            {profile.role !== 'DOCTOR' && (
+              <button className={`flex-1 py-2 text-sm font-medium rounded-lg ${tab === 'maint' ? 'bg-[#2c2c2e] text-white' : 'text-[#8e8e93]'}`} onClick={() => setTab('maint')}>Facility</button>
             )}
           </div>
 
@@ -583,27 +662,10 @@
           )}
 
           {showForm && isTeacher && (
-            <div className="am-card p-4 border border-[#2c2c2e] mb-4 space-y-3 animate-in">
-              <input
-                type="text"
-                placeholder={tab === 'med' ? "Student Name / Roll" : "Issue Type (e.g. Electrical)"}
-                className="w-full p-2 bg-[#2c2c2e] border border-[#3a3a3c] rounded-lg text-white placeholder-[#8e8e93] text-sm"
-                value={newIssue.target}
-                onChange={e => setNewIssue({ ...newIssue, target: e.target.value })}
-              />
-              <input
-                type="text"
-                placeholder={tab === 'med' ? "Class/Room" : "Location/Room"}
-                className="w-full p-2 bg-[#2c2c2e] border border-[#3a3a3c] rounded-lg text-white placeholder-[#8e8e93] text-sm"
-                value={newIssue.room}
-                onChange={e => setNewIssue({ ...newIssue, room: e.target.value })}
-              />
-              <textarea
-                placeholder="Describe the issue..."
-                className="w-full p-2 bg-[#2c2c2e] border border-[#3a3a3c] rounded-lg text-white placeholder-[#8e8e93] text-sm min-h-[80px]"
-                value={newIssue.description}
-                onChange={e => setNewIssue({ ...newIssue, description: e.target.value })}
-              />
+            <div className="am-card p-4 space-y-3 animate-in">
+              <input type="text" placeholder={tab === 'med' ? "Student Name" : "Issue Type"} className="w-full p-2 bg-[#2c2c2e] border border-[#3a3a3c] rounded-lg text-white text-sm" value={newIssue.target} onChange={e => setNewIssue({...newIssue, target: e.target.value})} />
+              <input type="text" placeholder={tab === 'med' ? "Class/Room" : "Location"} className="w-full p-2 bg-[#2c2c2e] border border-[#3a3a3c] rounded-lg text-white text-sm" value={newIssue.room} onChange={e => setNewIssue({...newIssue, room: e.target.value})} />
+              <textarea placeholder="Describe the issue..." className="w-full p-2 bg-[#2c2c2e] border border-[#3a3a3c] rounded-lg text-white text-sm min-h-[80px]" value={newIssue.description} onChange={e => setNewIssue({...newIssue, description: e.target.value})} />
               <button onClick={handleReport} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-2 rounded-lg">Submit</button>
             </div>
           )}
@@ -611,25 +673,16 @@
           <div className="space-y-3">
             {activeData.length === 0 && <p className="text-center text-[#8e8e93] py-8">No open issues.</p>}
             {activeData.map(item => (
-              <div key={item.id} className={`am-card p-4 shadow-md border-l-4 ${item.status === 'RESOLVED' ? 'border-l-green-500 opacity-60' : 'border-l-red-500'}`}>
+              <div key={item.id} className={`am-card p-4 border-l-4 ${item.status === 'RESOLVED' ? 'border-l-green-500 opacity-60' : 'border-l-red-500'}`}>
                 <div className="flex justify-between items-start mb-2">
-                  <h4 className="font-bold text-[#f5f5f7]">{tab === 'med' ? item.student_name : item.type}</h4>
-                  <span className={`text-[10px] px-2 py-1 rounded-full font-bold ${item.status === 'RESOLVED' ? 'bg-green-500/20 text-green-400' : 'bg-orange-500/20 text-orange-400'}`}>
-                    {item.status}
-                  </span>
+                  <h4 className="font-bold">{tab === 'med' ? item.student_name : item.type}</h4>
+                  <span className={`text-[10px] px-2 py-1 rounded-full font-bold ${item.status === 'RESOLVED' ? 'bg-green-500/20 text-green-400' : 'bg-orange-500/20 text-orange-400'}`}>{item.status}</span>
                 </div>
                 <p className="text-xs text-[#8e8e93] mb-2">Location: <span className="font-semibold text-[#e5e5ea]">{item.room || item.location}</span></p>
-                <p className="text-sm text-[#e5e5ea] bg-[#1c1c1e] p-2 rounded-lg border border-[#2c2c2e] mb-2">{item.description}</p>
+                <p className="text-sm bg-[#1c1c1e] p-2 rounded-lg border border-[#2c2c2e] mb-2">{item.description}</p>
                 <p className="text-[10px] text-[#8e8e93] text-right">Reported by: {item.reported_by}</p>
-
-                {item.status !== 'RESOLVED' && (
-                  (tab === 'med' && profile.role === 'DOCTOR') ||
-                  (tab === 'maint' && profile.role === 'MAINTENANCE')
-                ) && (
-                  <button
-                    onClick={() => tab === 'med' ? updateMed(item.id, { status: 'RESOLVED' }) : updateMaint(item.id, { status: 'RESOLVED' })}
-                    className="mt-3 w-full bg-[#2c2c2e] text-white py-2 rounded-lg text-sm font-medium flex justify-center items-center gap-2 hover:bg-[#3a3a3c] transition"
-                  >
+                {item.status !== 'RESOLVED' && ((tab === 'med' && profile.role === 'DOCTOR') || (tab === 'maint' && profile.role === 'MAINTENANCE')) && (
+                  <button onClick={() => tab === 'med' ? updateMed(item.id, { status: 'RESOLVED' }) : updateMaint(item.id, { status: 'RESOLVED' })} className="mt-3 w-full bg-[#2c2c2e] text-white py-2 rounded-lg text-sm font-medium flex justify-center items-center gap-2">
                     <IconCheckCircle size={16} /> Mark Resolved
                   </button>
                 )}
@@ -640,12 +693,64 @@
       );
     }
 
-    function ActionCard({ icon, title, subtitle }) {
+    // Users Tab (Admin only)
+    function UsersTab() {
+      const { data: users, addDocument } = usePublicCollection('users');
+      const [showForm, setShowForm] = useState(false);
+      const [form, setForm] = useState({ username: '', password: '', full_name: '', role: 'TEACHER' });
+
+      const handleAdd = () => {
+        if (form.username && form.password && form.full_name) {
+          addDocument(form);
+          setShowForm(false);
+          setForm({ username: '', password: '', full_name: '', role: 'TEACHER' });
+        }
+      };
+
       return (
-        <div className="am-card p-4 shadow-md flex flex-col items-start gap-2 cursor-pointer">
+        <div className="space-y-5">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold">Manage Users</h2>
+            <button onClick={() => setShowForm(!showForm)} className="bg-red-500/10 text-red-500 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-1">
+              <IconPlusCircle size={16} /> Add User
+            </button>
+          </div>
+
+          {showForm && (
+            <div className="am-card p-4 grid gap-3 animate-in">
+              <input type="text" placeholder="Full Name" className="p-2 bg-[#2c2c2e] border border-[#3a3a3c] rounded-lg text-white" value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} />
+              <input type="text" placeholder="Login ID" className="p-2 bg-[#2c2c2e] border border-[#3a3a3c] rounded-lg text-white" value={form.username} onChange={e => setForm({...form, username: e.target.value})} />
+              <input type="text" placeholder="Password" className="p-2 bg-[#2c2c2e] border border-[#3a3a3c] rounded-lg text-white" value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
+              <select className="p-2 bg-[#2c2c2e] border border-[#3a3a3c] rounded-lg text-white" value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
+                <option value="TEACHER">Teacher</option>
+                <option value="DOCTOR">Doctor</option>
+                <option value="MAINTENANCE">Maintenance</option>
+                <option value="ADMIN">Admin</option>
+              </select>
+              <button onClick={handleAdd} className="bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-2 rounded-lg">Create User</button>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            {users.map(u => (
+              <div key={u.id} className="am-card p-4 flex justify-between items-center">
+                <div>
+                  <p className="font-medium">{u.full_name}</p>
+                  <p className="text-xs text-[#8e8e93]">@{u.username} · {u.role}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    function ActionCard({ icon, title, subtitle, onClick }) {
+      return (
+        <div onClick={onClick} className="am-card p-4 flex flex-col items-start gap-2 cursor-pointer hover:bg-[#252528] transition">
           <div className="bg-[#2c2c2e] p-2 rounded-xl">{icon}</div>
           <div>
-            <h4 className="font-bold text-[#f5f5f7] text-sm">{title}</h4>
+            <h4 className="font-bold text-sm">{title}</h4>
             <p className="text-[10px] text-[#8e8e93] mt-0.5">{subtitle}</p>
           </div>
         </div>
