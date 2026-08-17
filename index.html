@@ -9,7 +9,6 @@
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
@@ -63,15 +62,15 @@
     const { useState, useEffect, useCallback } = React;
 
     // ────────────────────────────────────────────────
-    // 🔑 PASTE YOUR SUPABASE KEYS HERE
+    // ✅ YOUR SUPABASE KEYS (fixed)
     // ────────────────────────────────────────────────
-    const SUPABASE_URL 'https://qmbceqqodudvlhmgfgun.supabase.co';
-    const SUPABASE_ANON_KEY =  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYmNlcXFvZHVkdmxobWdmZ3VuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5MDQ2MDYsImV4cCI6MjEwMjQ4MDYwNn0.G8i8qSW4aAlPAAhHV6l11YCkIXenb1qaYIWa8ZX9PHk';
+    const SUPABASE_URL = 'https://qmbceqqodudvlhmgfgun.supabase.co';
+    const SUPABASE_ANON_KEY = 'PASTE_YOUR_FULL_ANON_KEY_HERE';   // ← paste the long key here
 
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // ────────────────────────────────────────────────
-    // Icons (same as original)
+    // Icons
     // ────────────────────────────────────────────────
     const IconHome = ({ size, className }) => <span className={`icon-svg ${className || ''}`}><svg viewBox="0 0 24 24" width={size || 20} height={size || 20}><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg></span>;
     const IconClipboard = ({ size, className }) => <span className={`icon-svg ${className || ''}`}><svg viewBox="0 0 24 24" width={size || 20} height={size || 20}><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /><path d="M9 13l2 2 4-4" /></svg></span>;
@@ -86,9 +85,7 @@
     const IconFileText = ({ size, className }) => <span className={`icon-svg ${className || ''}`}><svg viewBox="0 0 24 24" width={size || 20} height={size || 20}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg></span>;
     const IconBell = ({ size, className }) => <span className={`icon-svg ${className || ''}`}><svg viewBox="0 0 24 24" width={size || 20} height={size || 20}><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 01-3.46 0" /></svg></span>;
 
-    // ────────────────────────────────────────────────
-    // Mock credentials (same as before)
-    // ────────────────────────────────────────────────
+    // Mock credentials
     const MOCK_CREDENTIALS = {
       'admin': { role: 'ADMIN', name: 'Head of Dept', pass: '123' },
       't1': { role: 'TEACHER', name: 'Mr. Rahman (Maths)', pass: '123' },
@@ -98,9 +95,7 @@
       'stu1': { role: 'STUDENT', name: 'Ahmad Abdullah', class: 'Class 10-A', reg: 'BAN-2023-1042', pass: '123' },
     };
 
-    // ────────────────────────────────────────────────
-    // Custom hook – now uses Supabase
-    // ────────────────────────────────────────────────
+    // Custom hook
     function usePublicCollection(tableName) {
       const [data, setData] = useState([]);
       const [loading, setLoading] = useState(true);
@@ -121,18 +116,13 @@
 
       useEffect(() => {
         fetchData();
-
-        // Realtime subscription
         const channel = supabase
           .channel(`public:${tableName}`)
           .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, () => {
             fetchData();
           })
           .subscribe();
-
-        return () => {
-          supabase.removeChannel(channel);
-        };
+        return () => supabase.removeChannel(channel);
       }, [tableName, fetchData]);
 
       const addDocument = useCallback(async (docData) => {
@@ -142,10 +132,7 @@
       }, [tableName, fetchData]);
 
       const updateDocument = useCallback(async (docId, updateData) => {
-        const { error } = await supabase
-          .from(tableName)
-          .update(updateData)
-          .eq('id', docId);
+        const { error } = await supabase.from(tableName).update(updateData).eq('id', docId);
         if (error) console.error('Update error:', error);
         else fetchData();
       }, [tableName, fetchData]);
@@ -153,9 +140,7 @@
       return { data, loading, addDocument, updateDocument };
     }
 
-    // ────────────────────────────────────────────────
     // Main App
-    // ────────────────────────────────────────────────
     function App() {
       const [appProfile, setAppProfile] = useState(null);
       const [activeTab, setActiveTab] = useState('home');
@@ -214,9 +199,6 @@
       );
     }
 
-    // ────────────────────────────────────────────────
-    // Login Screen
-    // ────────────────────────────────────────────────
     function LoginScreen({ onLogin }) {
       const [id, setId] = useState('');
       const [pass, setPass] = useState('');
@@ -281,9 +263,6 @@
       );
     }
 
-    // ────────────────────────────────────────────────
-    // Home Tab
-    // ────────────────────────────────────────────────
     function HomeTab({ profile }) {
       if (profile.role === 'STUDENT') {
         return (
@@ -391,9 +370,6 @@
       );
     }
 
-    // ────────────────────────────────────────────────
-    // Notices Tab
-    // ────────────────────────────────────────────────
     function NoticesTab({ profile }) {
       const { data: notices, addDocument } = usePublicCollection('notices');
       const [showForm, setShowForm] = useState(false);
@@ -471,9 +447,6 @@
       );
     }
 
-    // ────────────────────────────────────────────────
-    // Schedule / Proxy Tab
-    // ────────────────────────────────────────────────
     function ScheduleTab({ profile }) {
       const { data: proxies, addDocument } = usePublicCollection('proxies');
       const [showForm, setShowForm] = useState(false);
@@ -546,9 +519,6 @@
       );
     }
 
-    // ────────────────────────────────────────────────
-    // Issues Tab
-    // ────────────────────────────────────────────────
     function IssuesTab({ profile }) {
       const { data: medicalIssues, addDocument: addMed, updateDocument: updateMed } = usePublicCollection('medical');
       const { data: maintIssues, addDocument: addMaint, updateDocument: updateMaint } = usePublicCollection('maintenance');
@@ -682,9 +652,6 @@
       );
     }
 
-    // ────────────────────────────────────────────────
-    // Render
-    // ────────────────────────────────────────────────
     const root = document.getElementById('root');
     ReactDOM.createRoot(root).render(React.createElement(App));
   </script>
