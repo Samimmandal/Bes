@@ -10,8 +10,9 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    body { background: #0b0b0e; margin: 0; font-family: system-ui, sans-serif; color: white; }
+    body { background: #0b0b0e; margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: white; }
     .card { background: #1c1c1e; border-radius: 16px; }
+    .header { background: rgba(11,11,14,0.95); border-bottom: 1px solid #2c2c2e; }
   </style>
 </head>
 <body>
@@ -24,12 +25,6 @@
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlaXlidWhub3pncWF0ZHlyZGhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzIyNDEsImV4cCI6MjEwMjU0ODI0MX0.a_1otAvBMRa20HSA01jcvtCbxwUpXNbmCzVmA9Qm-DE';
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Open WhatsApp with pre-filled message
-    function sendWhatsApp(message) {
-      const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
-      window.open(url, '_blank');
-    }
-
     function useCollection(table) {
       const [data, setData] = useState([]);
       const load = useCallback(async () => {
@@ -39,10 +34,8 @@
 
       useEffect(() => {
         load();
-        const channel = supabase.channel(table)
-          .on('postgres_changes', { event: '*', schema: 'public', table }, load)
-          .subscribe();
-        return () => supabase.removeChannel(channel);
+        const ch = supabase.channel(table).on('postgres_changes', { event: '*', schema: 'public', table }, load).subscribe();
+        return () => supabase.removeChannel(ch);
       }, [table, load]);
 
       const add = async (row) => {
@@ -86,16 +79,18 @@
 
       return (
         <div className="min-h-screen max-w-lg mx-auto flex flex-col bg-[#0b0b0e]">
-          <div className="p-4 border-b border-gray-800 flex justify-between items-center sticky top-0 bg-[#0b0b0e] z-20">
+          {/* Header */}
+          <div className="header p-4 flex justify-between items-center sticky top-0 z-20">
             <div>
               <h1 className="text-lg font-bold">Bes An Noor Model School</h1>
               <p className="text-xs text-gray-400">(Boys' Unit)</p>
             </div>
-            <button onClick={() => { setUser(null); setTab('home'); }} className="text-sm bg-gray-800 px-3 py-1.5 rounded-lg text-gray-300">
+            <button onClick={() => { setUser(null); setTab('home'); }} className="text-sm bg-[#2c2c2e] px-3 py-1.5 rounded-lg text-gray-300">
               Logout
             </button>
           </div>
 
+          {/* Content */}
           <div className="flex-1 overflow-y-auto p-4 pb-24">
             {tab === 'home' && <Home user={user} />}
             {tab === 'notices' && <Notices user={user} />}
@@ -106,6 +101,7 @@
             {tab === 'users' && user.role === 'ADMIN' && <Users />}
           </div>
 
+          {/* Bottom Navigation */}
           <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-[#141416] border-t border-gray-800 flex justify-around py-3 z-20">
             <NavBtn active={tab==='home'} onClick={() => setTab('home')} label="Home" />
             <NavBtn active={tab==='notices'} onClick={() => setTab('notices')} label="Notices" />
@@ -196,19 +192,27 @@
             <p className="text-sm text-gray-400">{user.role}</p>
           </div>
 
+          {/* Attendance with both buttons */}
           <div className="card p-5">
             <h3 className="font-bold mb-1">Daily Attendance</h3>
             <p className="text-sm text-gray-400 mb-4">{new Date().toDateString()}</p>
+
             {mine ? (
-              <span className={`inline-block px-4 py-2 rounded-full text-sm font-medium ${mine.status==='PRESENT' ? 'bg-green-500/20 text-green-400' : 'bg-orange-500/20 text-orange-400'}`}>
+              <span className={`inline-block px-4 py-2 rounded-full text-sm font-medium ${mine.status === 'PRESENT' ? 'bg-green-500/20 text-green-400' : 'bg-orange-500/20 text-orange-400'}`}>
                 {mine.status}
               </span>
             ) : (
               <div className="flex gap-3">
-                <button onClick={() => add({ date: today, teacher_id: user.id, name: user.name, status: 'PRESENT' })} className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-5 py-2 rounded-full text-sm font-semibold">
+                <button 
+                  onClick={() => add({ date: today, teacher_id: user.id, name: user.name, status: 'PRESENT' })}
+                  className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-5 py-2.5 rounded-full text-sm font-semibold"
+                >
                   Present
                 </button>
-                <button onClick={() => add({ date: today, teacher_id: user.id, name: user.name, status: 'ABSENT' })} className="bg-gray-700 text-orange-400 px-5 py-2 rounded-full text-sm font-semibold">
+                <button 
+                  onClick={() => add({ date: today, teacher_id: user.id, name: user.name, status: 'ABSENT' })}
+                  className="bg-[#2c2c2e] text-orange-400 border border-orange-500/40 px-5 py-2.5 rounded-full text-sm font-semibold"
+                >
                   Absent
                 </button>
               </div>
@@ -224,7 +228,7 @@
                 attendance.filter(a => a.date === today).map(a => (
                   <div key={a.id} className="flex justify-between py-2 border-b border-gray-800 text-sm">
                     <span>{a.name}</span>
-                    <span className={a.status==='PRESENT' ? 'text-green-400' : 'text-orange-400'}>{a.status}</span>
+                    <span className={a.status === 'PRESENT' ? 'text-green-400' : 'text-orange-400'}>{a.status}</span>
                   </div>
                 ))
               )}
@@ -250,7 +254,7 @@
             <div className="card p-4 space-y-3">
               <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" />
               <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Content" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[80px]" />
-              <button onClick={() => { if(title&&content){ add({title, content, author: user.name, type:'text'}); setShow(false); setTitle(''); setContent(''); }}} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-2 rounded-xl">Publish</button>
+              <button onClick={() => { if(title && content){ add({title, content, author: user.name, type:'text'}); setShow(false); setTitle(''); setContent(''); }}} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-2 rounded-xl">Publish</button>
             </div>
           )}
           {data.length === 0 && <p className="text-center text-gray-400 py-8">No notices yet</p>}
@@ -270,42 +274,24 @@
       const [show, setShow] = useState(false);
       const [form, setForm] = useState({ date:'', absent_teacher:'', proxy_teacher:'', class_room:'', subject:'' });
 
-      const assignProxy = () => {
-        if (!form.date || !form.proxy_teacher) return alert('Date and Proxy Teacher are required');
-        
-        // Save to database
-        add(form);
-
-        // Automatic WhatsApp message
-        const message = `📅 *PROXY ASSIGNMENT*\n\nDate: ${form.date}\nClass: ${form.class_room}\nSubject: ${form.subject}\n\nAbsent Teacher: ${form.absent_teacher}\nProxy Teacher: ${form.proxy_teacher}\n\n- Bes An Noor Model School (Boys' Unit)`;
-        sendWhatsApp(message);
-
-        setShow(false);
-        setForm({ date:'', absent_teacher:'', proxy_teacher:'', class_room:'', subject:'' });
-      };
-
       return (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold">Proxy Schedule</h2>
             {user.role === 'ADMIN' && <button onClick={() => setShow(!show)} className="text-red-400 text-sm font-medium">+ Add</button>}
           </div>
-
           {show && user.role === 'ADMIN' && (
             <div className="card p-4 space-y-3">
               <input type="date" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.date} onChange={e => setForm({...form, date:e.target.value})} />
               <input placeholder="Absent Teacher" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.absent_teacher} onChange={e => setForm({...form, absent_teacher:e.target.value})} />
-              <input placeholder="Proxy Teacher Name" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.proxy_teacher} onChange={e => setForm({...form, proxy_teacher:e.target.value})} />
+              <input placeholder="Proxy Teacher" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.proxy_teacher} onChange={e => setForm({...form, proxy_teacher:e.target.value})} />
               <div className="grid grid-cols-2 gap-2">
                 <input placeholder="Class" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.class_room} onChange={e => setForm({...form, class_room:e.target.value})} />
                 <input placeholder="Subject" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.subject} onChange={e => setForm({...form, subject:e.target.value})} />
               </div>
-              <button onClick={assignProxy} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">
-                Assign & Send WhatsApp
-              </button>
+              <button onClick={() => { if(form.date && form.proxy_teacher){ add(form); setShow(false); setForm({date:'',absent_teacher:'',proxy_teacher:'',class_room:'',subject:''}); }}} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-2 rounded-xl">Assign</button>
             </div>
           )}
-
           {data.length === 0 && <p className="text-center text-gray-400 py-8">No proxy classes</p>}
           {data.map(p => (
             <div key={p.id} className="card p-4 border-l-4 border-red-500">
@@ -327,31 +313,20 @@
       const { data: maint, add: addMaint, update: upMaint } = useCollection('maintenance');
       const [type, setType] = useState('medical');
       const [show, setShow] = useState(false);
-      const [form, setForm] = useState({
-        student_name: '', class_name: '', reg: '', problem: '', other_illness: '',
-        issue_type: '', location: ''
-      });
+      const [form, setForm] = useState({ student_name:'', class_name:'', reg:'', problem:'', issue_type:'', location:'' });
 
-      const submitReport = () => {
+      const submit = () => {
         if (type === 'medical') {
           if (!form.student_name || !form.problem) return alert('Student Name and Problem are required');
-
-          // Save to database
           addMed({
             student_name: form.student_name,
             room: `Class: ${form.class_name || 'N/A'} | Reg: ${form.reg || 'N/A'}`,
-            description: `Problem: ${form.problem}\nOther Illnesses: ${form.other_illness || 'None'}`,
+            description: form.problem,
             reported_by: user.name,
             status: 'PENDING'
           });
-
-          // Automatic WhatsApp to Doctor
-          const message = `🏥 *MEDICAL REPORT*\n\nStudent: ${form.student_name}\nClass: ${form.class_name || 'N/A'}\nRegistration: ${form.reg || 'N/A'}\n\nProblem: ${form.problem}\nOther Illnesses: ${form.other_illness || 'None'}\n\nReported by: ${user.name}\n- Bes An Noor Model School`;
-          sendWhatsApp(message);
-
         } else {
-          if (!form.issue_type || !form.problem) return alert('Issue Type and Description are required');
-
+          if (!form.issue_type || !form.problem) return alert('Issue Type and Description required');
           addMaint({
             type: form.issue_type,
             location: form.location || 'N/A',
@@ -359,14 +334,9 @@
             reported_by: user.name,
             status: 'PENDING'
           });
-
-          // Automatic WhatsApp to Maintenance
-          const message = `🔧 *FACILITY / HOME PROBLEM*\n\nType: ${form.issue_type}\nLocation: ${form.location || 'N/A'}\n\nDetails: ${form.problem}\n\nReported by: ${user.name}\n- Bes An Noor Model School`;
-          sendWhatsApp(message);
         }
-
         setShow(false);
-        setForm({ student_name:'', class_name:'', reg:'', problem:'', other_illness:'', issue_type:'', location:'' });
+        setForm({ student_name:'', class_name:'', reg:'', problem:'', issue_type:'', location:'' });
       };
 
       const list = type === 'medical' ? medical : maint;
@@ -378,7 +348,7 @@
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold">Report Issues</h2>
             {user.role === 'TEACHER' && (
-              <button onClick={() => setShow(!show)} className="text-red-400 text-sm font-medium">+ New Report</button>
+              <button onClick={() => setShow(!show)} className="text-red-400 text-sm font-medium">+ New</button>
             )}
           </div>
 
@@ -396,23 +366,22 @@
                     <input placeholder="Class" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.class_name} onChange={e => setForm({...form, class_name:e.target.value})} />
                     <input placeholder="Registration No" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.reg} onChange={e => setForm({...form, reg:e.target.value})} />
                   </div>
-                  <textarea placeholder="What problem does the student have? *" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[70px]" value={form.problem} onChange={e => setForm({...form, problem:e.target.value})} />
-                  <textarea placeholder="Any other illnesses?" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[60px]" value={form.other_illness} onChange={e => setForm({...form, other_illness:e.target.value})} />
+                  <textarea placeholder="What problem does the student have? *" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[80px]" value={form.problem} onChange={e => setForm({...form, problem:e.target.value})} />
                 </>
               ) : (
                 <>
-                  <input placeholder="Issue Type (Electrical, Water, etc) *" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.issue_type} onChange={e => setForm({...form, issue_type:e.target.value})} />
+                  <input placeholder="Issue Type (Electrical, Water etc) *" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.issue_type} onChange={e => setForm({...form, issue_type:e.target.value})} />
                   <input placeholder="Location" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.location} onChange={e => setForm({...form, location:e.target.value})} />
                   <textarea placeholder="Describe the problem *" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[80px]" value={form.problem} onChange={e => setForm({...form, problem:e.target.value})} />
                 </>
               )}
-              <button onClick={submitReport} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">
-                Submit & Send WhatsApp
+              <button onClick={submit} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">
+                Submit Report
               </button>
             </div>
           )}
 
-          {list.length === 0 && <p className="text-center text-gray-400 py-8">No issues reported yet</p>}
+          {list.length === 0 && <p className="text-center text-gray-400 py-8">No issues yet</p>}
           {list.map(item => (
             <div key={item.id} className={`card p-4 border-l-4 ${item.status==='RESOLVED' ? 'border-green-500 opacity-70' : 'border-red-500'}`}>
               <div className="flex justify-between mb-1">
@@ -423,7 +392,7 @@
               <p className="text-sm bg-[#252528] p-3 rounded-lg mb-2 whitespace-pre-wrap">{item.description}</p>
               <p className="text-xs text-gray-500 text-right">By {item.reported_by}</p>
               {item.status !== 'RESOLVED' && canResolve && (
-                <button onClick={() => type==='medical' ? upMed(item.id, {status:'RESOLVED'}) : upMaint(item.id, {status:'RESOLVED'})} className="mt-3 w-full bg-gray-700 text-white py-2 rounded-xl text-sm">
+                <button onClick={() => type==='medical' ? upMed(item.id, {status:'RESOLVED'}) : upMaint(item.id, {status:'RESOLVED'})} className="mt-3 w-full bg-[#2c2c2e] text-white py-2 rounded-xl text-sm">
                   Mark Resolved
                 </button>
               )}
@@ -434,21 +403,46 @@
     }
 
     function Meeting() {
-      const [room, setRoom] = useState('');
-      const start = () => {
-        const name = room.trim() || 'BesAnNoorMeeting';
-        window.open('https://meet.jit.si/' + name.replace(/\s+/g,''), '_blank');
+      const [room, setRoom] = useState('BesAnNoorMeeting');
+      const [joined, setJoined] = useState(false);
+
+      const startMeeting = () => {
+        if (!room.trim()) return alert('Enter a room name');
+        setJoined(true);
       };
+
       return (
         <div className="space-y-4">
           <h2 className="text-xl font-bold">Online Meeting</h2>
-          <div className="card p-5 space-y-4">
-            <p className="text-sm text-gray-400">Create a free live video meeting. Share the same room name with teachers and doctor.</p>
-            <input value={room} onChange={e => setRoom(e.target.value)} placeholder="Room Name (optional)" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" />
-            <button onClick={start} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">
-              Start / Join Meeting
-            </button>
-          </div>
+
+          {!joined ? (
+            <div className="card p-5 space-y-4">
+              <p className="text-sm text-gray-400">Start or join a live meeting inside the app. Share the same room name with others.</p>
+              <input 
+                value={room} 
+                onChange={e => setRoom(e.target.value)} 
+                placeholder="Room Name" 
+                className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" 
+              />
+              <button onClick={startMeeting} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">
+                Start / Join Meeting
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <p className="text-sm text-gray-400">Room: <span className="text-white font-medium">{room}</span></p>
+                <button onClick={() => setJoined(false)} className="text-sm text-red-400">Leave</button>
+              </div>
+              <div className="rounded-xl overflow-hidden bg-black" style={{height: '70vh'}}>
+                <iframe
+                  src={`https://meet.jit.si/${room.replace(/\s+/g, '')}`}
+                  allow="camera; microphone; fullscreen; display-capture; autoplay"
+                  className="w-full h-full border-0"
+                ></iframe>
+              </div>
+            </div>
+          )}
         </div>
       );
     }
@@ -497,7 +491,7 @@
                 <option value="DOCTOR">Doctor</option>
                 <option value="MAINTENANCE">Maintenance</option>
               </select>
-              <button onClick={() => { if(form.username&&form.password&&form.full_name){ add(form); setShow(false); setForm({username:'',password:'',full_name:'',role:'TEACHER'}); }}} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-2 rounded-xl">Create</button>
+              <button onClick={() => { if(form.username && form.password && form.full_name){ add(form); setShow(false); setForm({username:'',password:'',full_name:'',role:'TEACHER'}); }}} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-2 rounded-xl">Create</button>
             </div>
           )}
           {data.map(u => (
