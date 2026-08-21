@@ -11,23 +11,59 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body { background: #0b0b0e; margin: 0; font-family: system-ui, sans-serif; color: white; }
-    .card { background: #1c1c1e; border-radius: 16px; padding: 16px; }
+    .card { background: #1c1c1e; border-radius: 16px; }
   </style>
 </head>
 <body>
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useCallback } = React;
 
     const SUPABASE_URL = 'https://peiybuhnozgqatdyrdhf.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlaXlidWhub3pncWF0ZHlyZGhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzIyNDEsImV4cCI6MjEwMjU0ODI0MX0.a_1otAvBMRa20HSA01jcvtCbxwUpXNbmCzVmA9Qm-DE';
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    // Open WhatsApp with pre-filled message
+    function sendWhatsApp(message) {
+      const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
+      window.open(url, '_blank');
+    }
+
+    function useCollection(table) {
+      const [data, setData] = useState([]);
+      const load = useCallback(async () => {
+        const { data: rows } = await supabase.from(table).select('*').order('created_at', { ascending: false });
+        setData(rows || []);
+      }, [table]);
+
+      useEffect(() => {
+        load();
+        const channel = supabase.channel(table)
+          .on('postgres_changes', { event: '*', schema: 'public', table }, load)
+          .subscribe();
+        return () => supabase.removeChannel(channel);
+      }, [table, load]);
+
+      const add = async (row) => {
+        const { error } = await supabase.from(table).insert([row]);
+        if (error) alert(error.message);
+        else load();
+      };
+
+      const update = async (id, changes) => {
+        const { error } = await supabase.from(table).update(changes).eq('id', id);
+        if (error) alert(error.message);
+        else load();
+      };
+
+      return { data, add, update };
+    }
+
     function App() {
       const [user, setUser] = useState(null);
       const [tab, setTab] = useState('home');
-      const [showRegister, setShowRegister] = useState(false);
+      const [showReg, setShowReg] = useState(false);
 
       const login = async (username, password) => {
         const { data, error } = await supabase
@@ -37,242 +73,189 @@
           .eq('password', password.trim())
           .maybeSingle();
 
-        if (error) {
-          alert('Error: ' + error.message);
-          return;
-        }
-        if (!data) {
-          alert('Invalid Login ID or Password');
-          return;
-        }
-        setUser({
-          id: data.username,
-          name: data.full_name,
-          role: data.role
-        });
+        if (error) return alert('Error: ' + error.message);
+        if (!data) return alert('Invalid Login ID or Password');
+        setUser({ id: data.username, name: data.full_name, role: data.role });
       };
 
       if (!user) {
-        if (showRegister) {
-          return <RegisterScreen onBack={() => setShowRegister(false)} onSuccess={() => setShowRegister(false)} />;
-        }
-        return <LoginScreen onLogin={login} onRegister={() => setShowRegister(true)} />;
+        return showReg
+          ? <Register onBack={() => setShowReg(false)} onSuccess={() => setShowReg(false)} />
+          : <Login onLogin={login} onRegister={() => setShowReg(true)} />;
       }
 
       return (
-        <div className="min-h-screen max-w-lg mx-auto flex flex-col">
-          {/* Header */}
-          <div className="p-4 border-b border-gray-800 flex justify-between items-center sticky top-0 bg-[#0b0b0e] z-10">
+        <div className="min-h-screen max-w-lg mx-auto flex flex-col bg-[#0b0b0e]">
+          <div className="p-4 border-b border-gray-800 flex justify-between items-center sticky top-0 bg-[#0b0b0e] z-20">
             <div>
               <h1 className="text-lg font-bold">Bes An Noor Model School</h1>
               <p className="text-xs text-gray-400">(Boys' Unit)</p>
             </div>
-            <button 
-              onClick={() => { setUser(null); setTab('home'); }}
-              className="text-sm text-gray-400 px-3 py-1 rounded bg-gray-800"
-            >
+            <button onClick={() => { setUser(null); setTab('home'); }} className="text-sm bg-gray-800 px-3 py-1.5 rounded-lg text-gray-300">
               Logout
             </button>
           </div>
 
-          {/* Content */}
-          <div className="flex-1 p-4 pb-24 overflow-y-auto">
-            {tab === 'home' && <HomeTab user={user} />}
-            {tab === 'notices' && <NoticesTab user={user} />}
-            {tab === 'proxy' && <ProxyTab user={user} />}
-            {tab === 'report' && <ReportTab user={user} />}
-            {tab === 'profile' && <ProfileTab user={user} />}
+          <div className="flex-1 overflow-y-auto p-4 pb-24">
+            {tab === 'home' && <Home user={user} />}
+            {tab === 'notices' && <Notices user={user} />}
+            {tab === 'proxy' && <ProxyPage user={user} />}
+            {tab === 'report' && <Report user={user} />}
+            {tab === 'meeting' && <Meeting />}
+            {tab === 'profile' && <Profile user={user} />}
+            {tab === 'users' && user.role === 'ADMIN' && <Users />}
           </div>
 
-          {/* Bottom Navigation */}
-          <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-[#141416] border-t border-gray-800 flex justify-around py-3">
-            <button onClick={() => setTab('home')} className={`text-xs ${tab==='home' ? 'text-red-500' : 'text-gray-400'}`}>Home</button>
-            <button onClick={() => setTab('notices')} className={`text-xs ${tab==='notices' ? 'text-red-500' : 'text-gray-400'}`}>Notices</button>
-            <button onClick={() => setTab('proxy')} className={`text-xs ${tab==='proxy' ? 'text-red-500' : 'text-gray-400'}`}>Proxy</button>
-            <button onClick={() => setTab('report')} className={`text-xs ${tab==='report' ? 'text-red-500' : 'text-gray-400'}`}>Report</button>
-            <button onClick={() => setTab('profile')} className={`text-xs ${tab==='profile' ? 'text-red-500' : 'text-gray-400'}`}>Profile</button>
+          <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-[#141416] border-t border-gray-800 flex justify-around py-3 z-20">
+            <NavBtn active={tab==='home'} onClick={() => setTab('home')} label="Home" />
+            <NavBtn active={tab==='notices'} onClick={() => setTab('notices')} label="Notices" />
+            <NavBtn active={tab==='proxy'} onClick={() => setTab('proxy')} label="Proxy" />
+            <NavBtn active={tab==='report'} onClick={() => setTab('report')} label="Report" />
+            <NavBtn active={tab==='meeting'} onClick={() => setTab('meeting')} label="Meeting" />
+            <NavBtn active={tab==='profile'} onClick={() => setTab('profile')} label="Profile" />
           </div>
         </div>
       );
     }
 
-    function LoginScreen({ onLogin, onRegister }) {
+    function NavBtn({ active, onClick, label }) {
+      return (
+        <button onClick={onClick} className={`text-xs ${active ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+          {label}
+        </button>
+      );
+    }
+
+    function Login({ onLogin, onRegister }) {
       const [id, setId] = useState('');
       const [pass, setPass] = useState('');
       return (
         <div className="min-h-screen flex items-center justify-center p-4">
           <div className="w-full max-w-sm">
             <div className="text-center mb-8">
-              <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center text-2xl mb-4">👤</div>
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-red-500 to-pink-500 mb-4"></div>
               <h1 className="text-2xl font-bold">Bes An Noor Model School</h1>
               <p className="text-gray-400 text-sm">(Boys' Unit)</p>
             </div>
-            <div className="card space-y-4">
-              <input 
-                value={id} 
-                onChange={e => setId(e.target.value)} 
-                placeholder="Login ID" 
-                className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white border border-gray-700"
-              />
-              <input 
-                type="password"
-                value={pass} 
-                onChange={e => setPass(e.target.value)} 
-                placeholder="Password" 
-                className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white border border-gray-700"
-              />
-              <button 
-                onClick={() => onLogin(id, pass)}
-                className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl"
-              >
-                Continue
-              </button>
+            <div className="card p-6 space-y-4">
+              <input value={id} onChange={e => setId(e.target.value)} placeholder="Login ID" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white border border-gray-700" />
+              <input type="password" value={pass} onChange={e => setPass(e.target.value)} placeholder="Password" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white border border-gray-700" />
+              <button onClick={() => onLogin(id, pass)} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">Continue</button>
             </div>
-            <button onClick={onRegister} className="w-full text-center text-red-400 text-sm mt-6">
-              Create Teacher / Staff Account
-            </button>
+            <button onClick={onRegister} className="w-full text-center text-red-400 text-sm mt-6">Create Teacher / Staff Account</button>
           </div>
         </div>
       );
     }
 
-    function RegisterScreen({ onBack, onSuccess }) {
-      const [form, setForm] = useState({ username: '', password: '', full_name: '', role: 'TEACHER' });
-      
+    function Register({ onBack, onSuccess }) {
+      const [form, setForm] = useState({ username:'', password:'', full_name:'', role:'TEACHER' });
       const submit = async () => {
-        if (!form.username || !form.password || !form.full_name) {
-          alert('Please fill all fields');
-          return;
-        }
+        if (!form.username || !form.password || !form.full_name) return alert('Fill all fields');
         const { error } = await supabase.from('users').insert([{
           username: form.username.trim(),
           password: form.password.trim(),
           full_name: form.full_name.trim(),
           role: form.role
         }]);
-        if (error) {
-          alert(error.message);
-        } else {
-          alert('Account created successfully!\n\nLogin ID: ' + form.username + '\nPassword: ' + form.password);
+        if (error) alert(error.message);
+        else {
+          alert('Account created!\nLogin ID: ' + form.username + '\nPassword: ' + form.password);
           onSuccess();
         }
       };
-
       return (
         <div className="min-h-screen flex items-center justify-center p-4">
-          <div className="w-full max-w-sm card space-y-3">
-            <h2 className="text-xl font-bold mb-2">Create Account</h2>
-            <input placeholder="Full Name" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} />
-            <input placeholder="Login ID" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.username} onChange={e => setForm({...form, username: e.target.value})} />
-            <input type="password" placeholder="Password" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
-            <select className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
+          <div className="w-full max-w-sm card p-6 space-y-3">
+            <h2 className="text-xl font-bold">Create Account</h2>
+            <input placeholder="Full Name" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.full_name} onChange={e => setForm({...form, full_name:e.target.value})} />
+            <input placeholder="Login ID" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.username} onChange={e => setForm({...form, username:e.target.value})} />
+            <input type="password" placeholder="Password" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.password} onChange={e => setForm({...form, password:e.target.value})} />
+            <select className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.role} onChange={e => setForm({...form, role:e.target.value})}>
               <option value="TEACHER">Teacher</option>
               <option value="ADMIN">Admin</option>
               <option value="DOCTOR">Doctor</option>
               <option value="MAINTENANCE">Maintenance</option>
             </select>
             <button onClick={submit} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">Create Account</button>
-            <button onClick={onBack} className="w-full text-gray-400 text-sm">Back to Login</button>
+            <button onClick={onBack} className="w-full text-gray-400 text-sm">Back</button>
           </div>
         </div>
       );
     }
 
-    function HomeTab({ user }) {
-      const [attendance, setAttendance] = useState([]);
+    function Home({ user }) {
+      const { data: attendance, add } = useCollection('attendance');
       const today = new Date().toISOString().split('T')[0];
-
-      useEffect(() => {
-        supabase.from('attendance').select('*').eq('date', today).then(({ data }) => {
-          setAttendance(data || []);
-        });
-      }, []);
-
-      const mine = attendance.find(a => a.teacher_id === user.id);
-
-      const markAttendance = async (status) => {
-        await supabase.from('attendance').insert([{
-          date: today,
-          teacher_id: user.id,
-          name: user.name,
-          status: status
-        }]);
-        const { data } = await supabase.from('attendance').select('*').eq('date', today);
-        setAttendance(data || []);
-      };
+      const mine = attendance.find(a => a.date === today && a.teacher_id === user.id);
 
       return (
         <div className="space-y-4">
-          <div className="card">
+          <div className="card p-5">
             <h2 className="font-bold text-lg">Welcome, {user.name}</h2>
             <p className="text-sm text-gray-400">{user.role}</p>
           </div>
 
-          <div className="card">
-            <h3 className="font-bold mb-2">Daily Attendance</h3>
+          <div className="card p-5">
+            <h3 className="font-bold mb-1">Daily Attendance</h3>
             <p className="text-sm text-gray-400 mb-4">{new Date().toDateString()}</p>
-            
             {mine ? (
-              <div className={`inline-block px-4 py-2 rounded-full text-sm ${mine.status === 'PRESENT' ? 'bg-green-500/20 text-green-400' : 'bg-orange-500/20 text-orange-400'}`}>
+              <span className={`inline-block px-4 py-2 rounded-full text-sm font-medium ${mine.status==='PRESENT' ? 'bg-green-500/20 text-green-400' : 'bg-orange-500/20 text-orange-400'}`}>
                 {mine.status}
-              </div>
+              </span>
             ) : (
               <div className="flex gap-3">
-                <button onClick={() => markAttendance('PRESENT')} className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-5 py-2 rounded-full text-sm font-semibold">
+                <button onClick={() => add({ date: today, teacher_id: user.id, name: user.name, status: 'PRESENT' })} className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-5 py-2 rounded-full text-sm font-semibold">
                   Present
                 </button>
-                <button onClick={() => markAttendance('ABSENT')} className="bg-gray-700 text-orange-400 px-5 py-2 rounded-full text-sm font-semibold">
+                <button onClick={() => add({ date: today, teacher_id: user.id, name: user.name, status: 'ABSENT' })} className="bg-gray-700 text-orange-400 px-5 py-2 rounded-full text-sm font-semibold">
                   Absent
                 </button>
               </div>
             )}
           </div>
+
+          {user.role === 'ADMIN' && (
+            <div className="card p-5">
+              <h3 className="font-semibold mb-3">Today's Attendance</h3>
+              {attendance.filter(a => a.date === today).length === 0 ? (
+                <p className="text-sm text-gray-400">No one marked yet</p>
+              ) : (
+                attendance.filter(a => a.date === today).map(a => (
+                  <div key={a.id} className="flex justify-between py-2 border-b border-gray-800 text-sm">
+                    <span>{a.name}</span>
+                    <span className={a.status==='PRESENT' ? 'text-green-400' : 'text-orange-400'}>{a.status}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
         </div>
       );
     }
 
-    function NoticesTab({ user }) {
-      const [notices, setNotices] = useState([]);
-      const [showForm, setShowForm] = useState(false);
+    function Notices({ user }) {
+      const { data, add } = useCollection('notices');
+      const [show, setShow] = useState(false);
       const [title, setTitle] = useState('');
       const [content, setContent] = useState('');
-
-      useEffect(() => {
-        supabase.from('notices').select('*').order('created_at', { ascending: false }).then(({ data }) => {
-          setNotices(data || []);
-        });
-      }, []);
-
-      const publish = async () => {
-        if (!title || !content) return;
-        await supabase.from('notices').insert([{ title, content, author: user.name, type: 'text' }]);
-        const { data } = await supabase.from('notices').select('*').order('created_at', { ascending: false });
-        setNotices(data || []);
-        setShowForm(false);
-        setTitle('');
-        setContent('');
-      };
 
       return (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold">Notices</h2>
-            {user.role === 'ADMIN' && (
-              <button onClick={() => setShowForm(!showForm)} className="text-red-400 text-sm">+ Add</button>
-            )}
+            {user.role === 'ADMIN' && <button onClick={() => setShow(!show)} className="text-red-400 text-sm font-medium">+ Add</button>}
           </div>
-
-          {showForm && (
-            <div className="card space-y-3">
+          {show && (
+            <div className="card p-4 space-y-3">
               <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" />
               <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Content" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[80px]" />
-              <button onClick={publish} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-2 rounded-xl">Publish</button>
+              <button onClick={() => { if(title&&content){ add({title, content, author: user.name, type:'text'}); setShow(false); setTitle(''); setContent(''); }}} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-2 rounded-xl">Publish</button>
             </div>
           )}
-
-          {notices.length === 0 && <p className="text-center text-gray-400 py-8">No notices yet</p>}
-          {notices.map(n => (
-            <div key={n.id} className="card border-l-4 border-red-500">
+          {data.length === 0 && <p className="text-center text-gray-400 py-8">No notices yet</p>}
+          {data.map(n => (
+            <div key={n.id} className="card p-4 border-l-4 border-red-500">
               <h3 className="font-bold">{n.title}</h3>
               <p className="text-xs text-gray-400 mb-2">By {n.author}</p>
               <p className="text-sm">{n.content}</p>
@@ -282,51 +265,50 @@
       );
     }
 
-    function ProxyTab({ user }) {
-      const [proxies, setProxies] = useState([]);
-      const [showForm, setShowForm] = useState(false);
-      const [form, setForm] = useState({ date: '', absent_teacher: '', proxy_teacher: '', class_room: '', subject: '' });
+    function ProxyPage({ user }) {
+      const { data, add } = useCollection('proxies');
+      const [show, setShow] = useState(false);
+      const [form, setForm] = useState({ date:'', absent_teacher:'', proxy_teacher:'', class_room:'', subject:'' });
 
-      useEffect(() => {
-        supabase.from('proxies').select('*').order('created_at', { ascending: false }).then(({ data }) => {
-          setProxies(data || []);
-        });
-      }, []);
+      const assignProxy = () => {
+        if (!form.date || !form.proxy_teacher) return alert('Date and Proxy Teacher are required');
+        
+        // Save to database
+        add(form);
 
-      const assign = async () => {
-        if (!form.date || !form.proxy_teacher) return;
-        await supabase.from('proxies').insert([form]);
-        const { data } = await supabase.from('proxies').select('*').order('created_at', { ascending: false });
-        setProxies(data || []);
-        setShowForm(false);
-        setForm({ date: '', absent_teacher: '', proxy_teacher: '', class_room: '', subject: '' });
+        // Automatic WhatsApp message
+        const message = `📅 *PROXY ASSIGNMENT*\n\nDate: ${form.date}\nClass: ${form.class_room}\nSubject: ${form.subject}\n\nAbsent Teacher: ${form.absent_teacher}\nProxy Teacher: ${form.proxy_teacher}\n\n- Bes An Noor Model School (Boys' Unit)`;
+        sendWhatsApp(message);
+
+        setShow(false);
+        setForm({ date:'', absent_teacher:'', proxy_teacher:'', class_room:'', subject:'' });
       };
 
       return (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold">Proxy Schedule</h2>
-            {user.role === 'ADMIN' && (
-              <button onClick={() => setShowForm(!showForm)} className="text-red-400 text-sm">+ Add</button>
-            )}
+            {user.role === 'ADMIN' && <button onClick={() => setShow(!show)} className="text-red-400 text-sm font-medium">+ Add</button>}
           </div>
 
-          {showForm && user.role === 'ADMIN' && (
-            <div className="card space-y-3">
-              <input type="date" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.date} onChange={e => setForm({...form, date: e.target.value})} />
-              <input placeholder="Absent Teacher" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.absent_teacher} onChange={e => setForm({...form, absent_teacher: e.target.value})} />
-              <input placeholder="Proxy Teacher" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.proxy_teacher} onChange={e => setForm({...form, proxy_teacher: e.target.value})} />
+          {show && user.role === 'ADMIN' && (
+            <div className="card p-4 space-y-3">
+              <input type="date" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.date} onChange={e => setForm({...form, date:e.target.value})} />
+              <input placeholder="Absent Teacher" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.absent_teacher} onChange={e => setForm({...form, absent_teacher:e.target.value})} />
+              <input placeholder="Proxy Teacher Name" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.proxy_teacher} onChange={e => setForm({...form, proxy_teacher:e.target.value})} />
               <div className="grid grid-cols-2 gap-2">
-                <input placeholder="Class" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.class_room} onChange={e => setForm({...form, class_room: e.target.value})} />
-                <input placeholder="Subject" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.subject} onChange={e => setForm({...form, subject: e.target.value})} />
+                <input placeholder="Class" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.class_room} onChange={e => setForm({...form, class_room:e.target.value})} />
+                <input placeholder="Subject" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.subject} onChange={e => setForm({...form, subject:e.target.value})} />
               </div>
-              <button onClick={assign} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-2 rounded-xl">Assign</button>
+              <button onClick={assignProxy} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">
+                Assign & Send WhatsApp
+              </button>
             </div>
           )}
 
-          {proxies.length === 0 && <p className="text-center text-gray-400 py-8">No proxy classes</p>}
-          {proxies.map(p => (
-            <div key={p.id} className="card border-l-4 border-red-500">
+          {data.length === 0 && <p className="text-center text-gray-400 py-8">No proxy classes</p>}
+          {data.map(p => (
+            <div key={p.id} className="card p-4 border-l-4 border-red-500">
               <div className="flex justify-between text-xs mb-2">
                 <span className="bg-red-500/20 text-red-400 px-2 py-1 rounded">{p.date}</span>
                 <span className="bg-gray-700 px-2 py-1 rounded">{p.class_room}</span>
@@ -340,23 +322,142 @@
       );
     }
 
-    function ReportTab({ user }) {
+    function Report({ user }) {
+      const { data: medical, add: addMed, update: upMed } = useCollection('medical');
+      const { data: maint, add: addMaint, update: upMaint } = useCollection('maintenance');
+      const [type, setType] = useState('medical');
+      const [show, setShow] = useState(false);
+      const [form, setForm] = useState({
+        student_name: '', class_name: '', reg: '', problem: '', other_illness: '',
+        issue_type: '', location: ''
+      });
+
+      const submitReport = () => {
+        if (type === 'medical') {
+          if (!form.student_name || !form.problem) return alert('Student Name and Problem are required');
+
+          // Save to database
+          addMed({
+            student_name: form.student_name,
+            room: `Class: ${form.class_name || 'N/A'} | Reg: ${form.reg || 'N/A'}`,
+            description: `Problem: ${form.problem}\nOther Illnesses: ${form.other_illness || 'None'}`,
+            reported_by: user.name,
+            status: 'PENDING'
+          });
+
+          // Automatic WhatsApp to Doctor
+          const message = `🏥 *MEDICAL REPORT*\n\nStudent: ${form.student_name}\nClass: ${form.class_name || 'N/A'}\nRegistration: ${form.reg || 'N/A'}\n\nProblem: ${form.problem}\nOther Illnesses: ${form.other_illness || 'None'}\n\nReported by: ${user.name}\n- Bes An Noor Model School`;
+          sendWhatsApp(message);
+
+        } else {
+          if (!form.issue_type || !form.problem) return alert('Issue Type and Description are required');
+
+          addMaint({
+            type: form.issue_type,
+            location: form.location || 'N/A',
+            description: form.problem,
+            reported_by: user.name,
+            status: 'PENDING'
+          });
+
+          // Automatic WhatsApp to Maintenance
+          const message = `🔧 *FACILITY / HOME PROBLEM*\n\nType: ${form.issue_type}\nLocation: ${form.location || 'N/A'}\n\nDetails: ${form.problem}\n\nReported by: ${user.name}\n- Bes An Noor Model School`;
+          sendWhatsApp(message);
+        }
+
+        setShow(false);
+        setForm({ student_name:'', class_name:'', reg:'', problem:'', other_illness:'', issue_type:'', location:'' });
+      };
+
+      const list = type === 'medical' ? medical : maint;
+      const canResolve = (type === 'medical' && (user.role === 'DOCTOR' || user.role === 'ADMIN')) ||
+                         (type === 'facility' && (user.role === 'MAINTENANCE' || user.role === 'ADMIN'));
+
       return (
         <div className="space-y-4">
-          <h2 className="text-xl font-bold">Report Issues</h2>
-          <div className="card">
-            <p className="text-gray-400 text-sm">Medical and Facility reporting section will be available here.</p>
-            <p className="text-xs text-gray-500 mt-2">Currently under improvement for stability.</p>
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold">Report Issues</h2>
+            {user.role === 'TEACHER' && (
+              <button onClick={() => setShow(!show)} className="text-red-400 text-sm font-medium">+ New Report</button>
+            )}
+          </div>
+
+          <div className="flex bg-[#1c1c1e] p-1 rounded-xl">
+            <button onClick={() => setType('medical')} className={`flex-1 py-2 rounded-lg text-sm ${type==='medical' ? 'bg-[#2c2c2e] text-white' : 'text-gray-400'}`}>Medical</button>
+            <button onClick={() => setType('facility')} className={`flex-1 py-2 rounded-lg text-sm ${type==='facility' ? 'bg-[#2c2c2e] text-white' : 'text-gray-400'}`}>Facility</button>
+          </div>
+
+          {show && user.role === 'TEACHER' && (
+            <div className="card p-4 space-y-3">
+              {type === 'medical' ? (
+                <>
+                  <input placeholder="Student Name *" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.student_name} onChange={e => setForm({...form, student_name:e.target.value})} />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input placeholder="Class" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.class_name} onChange={e => setForm({...form, class_name:e.target.value})} />
+                    <input placeholder="Registration No" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.reg} onChange={e => setForm({...form, reg:e.target.value})} />
+                  </div>
+                  <textarea placeholder="What problem does the student have? *" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[70px]" value={form.problem} onChange={e => setForm({...form, problem:e.target.value})} />
+                  <textarea placeholder="Any other illnesses?" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[60px]" value={form.other_illness} onChange={e => setForm({...form, other_illness:e.target.value})} />
+                </>
+              ) : (
+                <>
+                  <input placeholder="Issue Type (Electrical, Water, etc) *" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.issue_type} onChange={e => setForm({...form, issue_type:e.target.value})} />
+                  <input placeholder="Location" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.location} onChange={e => setForm({...form, location:e.target.value})} />
+                  <textarea placeholder="Describe the problem *" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[80px]" value={form.problem} onChange={e => setForm({...form, problem:e.target.value})} />
+                </>
+              )}
+              <button onClick={submitReport} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">
+                Submit & Send WhatsApp
+              </button>
+            </div>
+          )}
+
+          {list.length === 0 && <p className="text-center text-gray-400 py-8">No issues reported yet</p>}
+          {list.map(item => (
+            <div key={item.id} className={`card p-4 border-l-4 ${item.status==='RESOLVED' ? 'border-green-500 opacity-70' : 'border-red-500'}`}>
+              <div className="flex justify-between mb-1">
+                <h4 className="font-bold">{type==='medical' ? item.student_name : item.type}</h4>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${item.status==='RESOLVED' ? 'bg-green-500/20 text-green-400' : 'bg-orange-500/20 text-orange-400'}`}>{item.status}</span>
+              </div>
+              <p className="text-xs text-gray-400 mb-2">{item.room || item.location}</p>
+              <p className="text-sm bg-[#252528] p-3 rounded-lg mb-2 whitespace-pre-wrap">{item.description}</p>
+              <p className="text-xs text-gray-500 text-right">By {item.reported_by}</p>
+              {item.status !== 'RESOLVED' && canResolve && (
+                <button onClick={() => type==='medical' ? upMed(item.id, {status:'RESOLVED'}) : upMaint(item.id, {status:'RESOLVED'})} className="mt-3 w-full bg-gray-700 text-white py-2 rounded-xl text-sm">
+                  Mark Resolved
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    function Meeting() {
+      const [room, setRoom] = useState('');
+      const start = () => {
+        const name = room.trim() || 'BesAnNoorMeeting';
+        window.open('https://meet.jit.si/' + name.replace(/\s+/g,''), '_blank');
+      };
+      return (
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold">Online Meeting</h2>
+          <div className="card p-5 space-y-4">
+            <p className="text-sm text-gray-400">Create a free live video meeting. Share the same room name with teachers and doctor.</p>
+            <input value={room} onChange={e => setRoom(e.target.value)} placeholder="Room Name (optional)" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" />
+            <button onClick={start} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">
+              Start / Join Meeting
+            </button>
           </div>
         </div>
       );
     }
 
-    function ProfileTab({ user }) {
+    function Profile({ user }) {
       return (
         <div className="space-y-4">
           <h2 className="text-xl font-bold">My Profile</h2>
-          <div className="card space-y-4">
+          <div className="card p-5 space-y-4">
             <div>
               <p className="text-xs text-gray-400">Full Name</p>
               <p className="font-medium">{user.name}</p>
@@ -374,8 +475,42 @@
       );
     }
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
+    function Users() {
+      const { data, add } = useCollection('users');
+      const [show, setShow] = useState(false);
+      const [form, setForm] = useState({ username:'', password:'', full_name:'', role:'TEACHER' });
+
+      return (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold">Manage Users</h2>
+            <button onClick={() => setShow(!show)} className="text-red-400 text-sm font-medium">+ Add</button>
+          </div>
+          {show && (
+            <div className="card p-4 space-y-3">
+              <input placeholder="Full Name" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.full_name} onChange={e => setForm({...form, full_name:e.target.value})} />
+              <input placeholder="Login ID" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.username} onChange={e => setForm({...form, username:e.target.value})} />
+              <input placeholder="Password" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.password} onChange={e => setForm({...form, password:e.target.value})} />
+              <select className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.role} onChange={e => setForm({...form, role:e.target.value})}>
+                <option value="TEACHER">Teacher</option>
+                <option value="ADMIN">Admin</option>
+                <option value="DOCTOR">Doctor</option>
+                <option value="MAINTENANCE">Maintenance</option>
+              </select>
+              <button onClick={() => { if(form.username&&form.password&&form.full_name){ add(form); setShow(false); setForm({username:'',password:'',full_name:'',role:'TEACHER'}); }}} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-2 rounded-xl">Create</button>
+            </div>
+          )}
+          {data.map(u => (
+            <div key={u.id} className="card p-4">
+              <p className="font-medium">{u.full_name}</p>
+              <p className="text-xs text-gray-400">{u.role}</p>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
 </body>
 </html>
