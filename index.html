@@ -12,10 +12,79 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
-    body { background: #0b0b0e; font-family: system-ui, sans-serif; margin: 0; color: #fff; }
-    .am-card { background: #1c1c1e; border-radius: 16px; }
-    .am-tab { background: rgba(20,20,23,0.95); backdrop-filter: blur(20px); border-top: 1px solid rgba(255,255,255,0.08); }
-    .am-header { background: rgba(11,11,14,0.95); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255,255,255,0.06); }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0b0b0e;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #ffffff;
+      min-height: 100vh;
+    }
+    .card {
+      background: #1c1c1e;
+      border-radius: 16px;
+      padding: 16px;
+    }
+    .header {
+      background: rgba(11, 11, 14, 0.95);
+      border-bottom: 1px solid #2c2c2e;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(20, 20, 23, 0.95);
+      border-top: 1px solid #2c2c2e;
+      display: flex;
+      justify-content: space-around;
+      padding: 10px 0;
+      z-index: 50;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    .nav-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      background: none;
+      border: none;
+      color: #8e8e93;
+      font-size: 10px;
+      cursor: pointer;
+    }
+    .nav-btn.active {
+      color: #ff2d55;
+    }
+    .btn-primary {
+      background: linear-gradient(to right, #ff2d55, #ff3b30);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      background: #2c2c2e;
+      border: 1px solid #3a3a3c;
+      border-radius: 12px;
+      color: white;
+      margin-bottom: 12px;
+    }
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
   </style>
 </head>
 <body>
@@ -24,22 +93,11 @@
   <script type="text/babel">
     const { useState, useEffect, useCallback } = React;
 
-    // ========== YOUR REAL KEYS (already filled) ==========
+    // Your correct keys
     const SUPABASE_URL = 'https://peiybuhnozgqatdyrdhf.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlaXlidWhub3pncWF0ZHlyZGhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzIyNDEsImV4cCI6MjEwMjU0ODI0MX0.a_1otAvBMRa20HSA01jcvtCbxwUpXNbmCzVmA9Qm-DE';
-    // =====================================================
 
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    // Simple icons
-    const IconUser = () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
-    const IconLogOut = () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
-    const IconHome = () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>;
-    const IconClipboard = () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/><path d="M9 13l2 2 4-4"/></svg>;
-    const IconCalendar = () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
-    const IconPlus = () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>;
-    const IconCheck = () => <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
-    const IconUsers = () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>;
 
     function useCollection(table) {
       const [data, setData] = useState([]);
@@ -62,13 +120,7 @@
         else load();
       };
 
-      const update = async (id, changes) => {
-        const { error } = await supabase.from(table).update(changes).eq('id', id);
-        if (error) alert(error.message);
-        else load();
-      };
-
-      return { data, add, update };
+      return { data, add };
     }
 
     function App() {
@@ -84,14 +136,9 @@
           .eq('password', password)
           .maybeSingle();
 
-        if (error) {
-          alert('Database error: ' + error.message);
-          return;
-        }
-        if (!data) {
-          alert('Invalid username or password');
-          return;
-        }
+        if (error) return alert('Error: ' + error.message);
+        if (!data) return alert('Invalid username or password');
+        
         setUser({
           id: data.username,
           name: data.full_name,
@@ -100,46 +147,53 @@
       };
 
       if (!user) {
-        return showReg
-          ? <Register onBack={() => setShowReg(false)} onSuccess={() => setShowReg(false)} />
-          : <Login onLogin={login} onRegister={() => setShowReg(true)} />;
+        return showReg ? 
+          <Register onBack={() => setShowReg(false)} onSuccess={() => setShowReg(false)} /> :
+          <Login onLogin={login} onRegister={() => setShowReg(true)} />;
       }
 
       return (
-        <div className="min-h-screen bg-[#0b0b0e] max-w-lg mx-auto flex flex-col">
-          <header className="am-header px-4 py-4 flex justify-between items-center sticky top-0 z-20">
+        <div className="container">
+          {/* Header */}
+          <div className="header" style={{padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
             <div>
-              <h1 className="text-xl font-bold">Bes An Noor</h1>
-              <p className="text-xs text-gray-400">School Portal</p>
+              <h1 style={{fontSize: '20px', fontWeight: 'bold'}}>Bes An Noor</h1>
+              <p style={{fontSize: '12px', color: '#8e8e93'}}>School Portal</p>
             </div>
-            <button onClick={() => { setUser(null); setTab('home'); }} className="p-2 rounded-full bg-[#2c2c2e]">
-              <IconLogOut />
+            <button onClick={() => { setUser(null); setTab('home'); }} style={{background: '#2c2c2e', border: 'none', borderRadius: '50%', width: '36px', height: '36px', color: '#8e8e93', cursor: 'pointer'}}>
+              ⎋
             </button>
-          </header>
+          </div>
 
-          <main className="flex-1 overflow-y-auto px-4 pb-24 pt-4">
+          {/* Content */}
+          <div style={{flex: 1, padding: '16px', paddingBottom: '90px', overflowY: 'auto'}}>
             {tab === 'home' && <Home user={user} setTab={setTab} />}
             {tab === 'notices' && <Notices user={user} />}
             {tab === 'proxy' && <Proxy user={user} />}
             {tab === 'users' && user.role === 'ADMIN' && <Users />}
-          </main>
+          </div>
 
-          <nav className="am-tab fixed bottom-0 left-0 right-0 max-w-lg mx-auto flex justify-around py-3 z-20">
-            <button onClick={() => setTab('home')} className={`flex flex-col items-center gap-1 ${tab==='home'?'text-red-500':'text-gray-400'}`}>
-              <IconHome /><span className="text-[10px]">Home</span>
+          {/* Bottom Navigation */}
+          <div className="bottom-nav">
+            <button className={`nav-btn ${tab === 'home' ? 'active' : ''}`} onClick={() => setTab('home')}>
+              <span>🏠</span>
+              <span>Home</span>
             </button>
-            <button onClick={() => setTab('notices')} className={`flex flex-col items-center gap-1 ${tab==='notices'?'text-red-500':'text-gray-400'}`}>
-              <IconClipboard /><span className="text-[10px]">Notices</span>
+            <button className={`nav-btn ${tab === 'notices' ? 'active' : ''}`} onClick={() => setTab('notices')}>
+              <span>📋</span>
+              <span>Notices</span>
             </button>
-            <button onClick={() => setTab('proxy')} className={`flex flex-col items-center gap-1 ${tab==='proxy'?'text-red-500':'text-gray-400'}`}>
-              <IconCalendar /><span className="text-[10px]">Proxy</span>
+            <button className={`nav-btn ${tab === 'proxy' ? 'active' : ''}`} onClick={() => setTab('proxy')}>
+              <span>📅</span>
+              <span>Proxy</span>
             </button>
             {user.role === 'ADMIN' && (
-              <button onClick={() => setTab('users')} className={`flex flex-col items-center gap-1 ${tab==='users'?'text-red-500':'text-gray-400'}`}>
-                <IconUsers /><span className="text-[10px]">Users</span>
+              <button className={`nav-btn ${tab === 'users' ? 'active' : ''}`} onClick={() => setTab('users')}>
+                <span>👥</span>
+                <span>Users</span>
               </button>
             )}
-          </nav>
+          </div>
         </div>
       );
     }
@@ -148,22 +202,24 @@
       const [id, setId] = useState('');
       const [pass, setPass] = useState('');
       return (
-        <div className="min-h-screen flex items-center justify-center p-4">
-          <div className="w-full max-w-sm">
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center mb-4">
-                <IconUser />
+        <div style={{minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'}}>
+          <div style={{width: '100%', maxWidth: '360px'}}>
+            <div style={{textAlign: 'center', marginBottom: '32px'}}>
+              <div style={{width: '70px', height: '70px', margin: '0 auto 16px', borderRadius: '20px', background: 'linear-gradient(to bottom right, #ff2d55, #ff3b30)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px'}}>
+                👤
               </div>
-              <h1 className="text-3xl font-bold">Bes An Noor</h1>
-              <p className="text-gray-400 mt-1">School Portal</p>
+              <h1 style={{fontSize: '28px', fontWeight: 'bold'}}>Bes An Noor</h1>
+              <p style={{color: '#8e8e93', marginTop: '4px'}}>School Portal</p>
             </div>
-            <div className="bg-[#1c1c1e] rounded-2xl p-6 space-y-4">
-              <input value={id} onChange={e => setId(e.target.value)} placeholder="Login ID" className="w-full p-3 bg-[#2c2c2e] rounded-xl border border-[#3a3a3c] text-white" />
-              <input type="password" value={pass} onChange={e => setPass(e.target.value)} placeholder="Password" className="w-full p-3 bg-[#2c2c2e] rounded-xl border border-[#3a3a3c] text-white" />
-              <button onClick={() => onLogin(id, pass)} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">Continue</button>
+            <div className="card">
+              <input value={id} onChange={e => setId(e.target.value)} placeholder="Login ID" />
+              <input type="password" value={pass} onChange={e => setPass(e.target.value)} placeholder="Password" />
+              <button className="btn-primary" onClick={() => onLogin(id, pass)}>Continue</button>
             </div>
-            <button onClick={onRegister} className="w-full text-center text-red-400 text-sm mt-6">Create Teacher / Staff Account</button>
-            <div className="mt-6 text-xs text-gray-400 bg-[#1c1c1e] p-4 rounded-xl text-center">
+            <button onClick={onRegister} style={{width: '100%', background: 'none', border: 'none', color: '#ff2d55', marginTop: '20px', cursor: 'pointer'}}>
+              Create Teacher / Staff Account
+            </button>
+            <div className="card" style={{marginTop: '20px', textAlign: 'center', fontSize: '13px', color: '#8e8e93'}}>
               Default Admin → <b>admin</b> / <b>123</b>
             </div>
           </div>
@@ -172,7 +228,7 @@
     }
 
     function Register({ onBack, onSuccess }) {
-      const [form, setForm] = useState({ username:'', password:'', full_name:'', role:'TEACHER' });
+      const [form, setForm] = useState({ username: '', password: '', full_name: '', role: 'TEACHER' });
       const submit = async () => {
         if (!form.username || !form.password || !form.full_name) return alert('Fill all fields');
         const { error } = await supabase.from('users').insert([{
@@ -188,20 +244,20 @@
         }
       };
       return (
-        <div className="min-h-screen flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-[#1c1c1e] rounded-2xl p-6 space-y-3">
-            <h2 className="text-xl font-bold mb-2">Create Account</h2>
-            <input placeholder="Full Name" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} />
-            <input placeholder="Login ID" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.username} onChange={e => setForm({...form, username: e.target.value})} />
-            <input type="password" placeholder="Password" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
-            <select className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
+        <div style={{minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'}}>
+          <div className="card" style={{width: '100%', maxWidth: '360px'}}>
+            <h2 style={{fontSize: '20px', fontWeight: 'bold', marginBottom: '20px'}}>Create Account</h2>
+            <input placeholder="Full Name" value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} />
+            <input placeholder="Login ID" value={form.username} onChange={e => setForm({...form, username: e.target.value})} />
+            <input type="password" placeholder="Password" value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
+            <select value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
               <option value="TEACHER">Teacher</option>
+              <option value="ADMIN">Admin</option>
               <option value="DOCTOR">Doctor</option>
               <option value="MAINTENANCE">Maintenance</option>
-              <option value="ADMIN">Admin</option>
             </select>
-            <button onClick={submit} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">Create Account</button>
-            <button onClick={onBack} className="w-full text-gray-400 text-sm">Back to Login</button>
+            <button className="btn-primary" onClick={submit}>Create Account</button>
+            <button onClick={onBack} style={{width: '100%', background: 'none', border: 'none', color: '#8e8e93', marginTop: '12px', cursor: 'pointer'}}>Back to Login</button>
           </div>
         </div>
       );
@@ -213,25 +269,25 @@
       const mine = attendance.find(a => a.date === today && a.teacher_id === user.id);
 
       return (
-        <div className="space-y-5">
-          <div className="am-card p-5 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center"><IconUser /></div>
+        <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+          <div className="card" style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+            <div style={{width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(to bottom right, #ff2d55, #ff3b30)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>👤</div>
             <div>
-              <h2 className="font-bold text-lg">Welcome, {user.name}</h2>
-              <p className="text-sm text-gray-400">{user.role}</p>
+              <div style={{fontWeight: 'bold', fontSize: '17px'}}>Welcome, {user.name}</div>
+              <div style={{fontSize: '13px', color: '#8e8e93'}}>{user.role}</div>
             </div>
           </div>
 
           {user.role === 'ADMIN' && (
-            <div className="am-card p-4">
-              <h3 className="font-semibold mb-3">Today's Attendance</h3>
+            <div className="card">
+              <div style={{fontWeight: '600', marginBottom: '12px'}}>Today's Attendance</div>
               {attendance.filter(a => a.date === today).length === 0 ? (
-                <p className="text-sm text-gray-400">No one marked yet</p>
+                <div style={{color: '#8e8e93', fontSize: '14px'}}>No one marked yet</div>
               ) : (
                 attendance.filter(a => a.date === today).map(a => (
-                  <div key={a.id} className="flex justify-between py-2 border-b border-[#2c2c2e] last:border-0 text-sm">
+                  <div key={a.id} style={{display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #2c2c2e', fontSize: '14px'}}>
                     <span>{a.name}</span>
-                    <span className="text-green-400">{a.status}</span>
+                    <span style={{color: '#30d158'}}>{a.status}</span>
                   </div>
                 ))
               )}
@@ -239,27 +295,29 @@
           )}
 
           {(user.role === 'TEACHER' || user.role === 'ADMIN') && (
-            <div className="am-card p-5 flex justify-between items-center">
+            <div className="card" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
               <div>
-                <h3 className="font-bold">Daily Attendance</h3>
-                <p className="text-sm text-gray-400">{new Date().toDateString()}</p>
+                <div style={{fontWeight: 'bold'}}>Daily Attendance</div>
+                <div style={{fontSize: '13px', color: '#8e8e93'}}>{new Date().toDateString()}</div>
               </div>
               {mine ? (
-                <span className="flex items-center gap-1 text-green-400 bg-green-500/10 px-3 py-1.5 rounded-full text-sm"><IconCheck /> Present</span>
+                <span style={{background: 'rgba(48,209,88,0.15)', color: '#30d158', padding: '6px 12px', borderRadius: '20px', fontSize: '13px'}}>✓ Present</span>
               ) : (
-                <button onClick={() => add({ date: today, teacher_id: user.id, name: user.name, status: 'PRESENT' })} className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-4 py-2 rounded-full text-sm font-semibold">Mark Present</button>
+                <button className="btn-primary" style={{width: 'auto', padding: '8px 16px', fontSize: '13px'}} onClick={() => add({ date: today, teacher_id: user.id, name: user.name, status: 'PRESENT' })}>
+                  Mark Present
+                </button>
               )}
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <button onClick={() => setTab('notices')} className="am-card p-4 text-left">
-              <div className="text-orange-400 mb-2"><IconClipboard /></div>
-              <div className="font-semibold text-sm">Notices</div>
+          <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
+            <button className="card" style={{textAlign: 'left', cursor: 'pointer', border: 'none', color: 'white'}} onClick={() => setTab('notices')}>
+              <div style={{fontSize: '20px', marginBottom: '8px'}}>📋</div>
+              <div style={{fontWeight: '600', fontSize: '14px'}}>Notices</div>
             </button>
-            <button onClick={() => setTab('proxy')} className="am-card p-4 text-left">
-              <div className="text-blue-400 mb-2"><IconCalendar /></div>
-              <div className="font-semibold text-sm">Proxy</div>
+            <button className="card" style={{textAlign: 'left', cursor: 'pointer', border: 'none', color: 'white'}} onClick={() => setTab('proxy')}>
+              <div style={{fontSize: '20px', marginBottom: '8px'}}>📅</div>
+              <div style={{fontWeight: '600', fontSize: '14px'}}>Proxy</div>
             </button>
           </div>
         </div>
@@ -273,26 +331,36 @@
       const [content, setContent] = useState('');
 
       return (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">Notices</h2>
+        <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+            <h2 style={{fontSize: '22px', fontWeight: 'bold'}}>Notices</h2>
             {user.role === 'ADMIN' && (
-              <button onClick={() => setShow(!show)} className="text-red-500 bg-red-500/10 p-2 rounded-full"><IconPlus /></button>
+              <button onClick={() => setShow(!show)} style={{background: 'rgba(255,45,85,0.15)', color: '#ff2d55', border: 'none', borderRadius: '50%', width: '36px', height: '36px', fontSize: '20px', cursor: 'pointer'}}>+</button>
             )}
           </div>
+
           {show && (
-            <div className="am-card p-4 space-y-3">
-              <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" className="w-full p-2 bg-[#2c2c2e] rounded-lg text-white" />
-              <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Content" className="w-full p-2 bg-[#2c2c2e] rounded-lg text-white min-h-[80px]" />
-              <button onClick={() => { if(title && content){ add({ title, content, type:'text', author: user.name }); setShow(false); setTitle(''); setContent(''); }}} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-2 rounded-xl">Publish</button>
+            <div className="card">
+              <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Notice Title" />
+              <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Write notice..." style={{minHeight: '80px'}} />
+              <button className="btn-primary" onClick={() => {
+                if (title && content) {
+                  add({ title, content, type: 'text', author: user.name });
+                  setShow(false);
+                  setTitle('');
+                  setContent('');
+                }
+              }}>Publish</button>
             </div>
           )}
-          {data.length === 0 && <p className="text-center text-gray-400 py-10">No notices yet</p>}
+
+          {data.length === 0 && <p style={{textAlign: 'center', color: '#8e8e93', padding: '40px 0'}}>No notices yet</p>}
+          
           {data.map(n => (
-            <div key={n.id} className="am-card p-5 border-l-4 border-red-500">
-              <h3 className="font-bold">{n.title}</h3>
-              <p className="text-xs text-gray-400 mb-2">By {n.author}</p>
-              <p className="text-sm whitespace-pre-wrap">{n.content}</p>
+            <div key={n.id} className="card" style={{borderLeft: '4px solid #ff2d55'}}>
+              <div style={{fontWeight: 'bold', marginBottom: '4px'}}>{n.title}</div>
+              <div style={{fontSize: '12px', color: '#8e8e93', marginBottom: '8px'}}>By {n.author}</div>
+              <div style={{fontSize: '14px', whiteSpace: 'pre-wrap'}}>{n.content}</div>
             </div>
           ))}
         </div>
@@ -302,46 +370,62 @@
     function Proxy({ user }) {
       const { data, add } = useCollection('proxies');
       const [show, setShow] = useState(false);
-      const [form, setForm] = useState({ date:'', absent_teacher:'', proxy_teacher:'', class_room:'', subject:'' });
+      const [form, setForm] = useState({ date: '', absent_teacher: '', proxy_teacher: '', class_room: '', subject: '' });
 
       return (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
+        <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
             <div>
-              <h2 className="text-2xl font-bold">Proxy Schedule</h2>
-              <p className="text-sm text-gray-400">Substitution roster</p>
+              <h2 style={{fontSize: '22px', fontWeight: 'bold'}}>Proxy Schedule</h2>
+              <p style={{fontSize: '13px', color: '#8e8e93'}}>Substitution roster</p>
             </div>
             {user.role === 'ADMIN' && (
-              <button onClick={() => setShow(!show)} className="bg-red-500/10 text-red-500 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-1"><IconPlus /> Add</button>
+              <button onClick={() => setShow(!show)} style={{background: 'rgba(255,45,85,0.15)', color: '#ff2d55', border: 'none', borderRadius: '20px', padding: '8px 14px', fontSize: '13px', fontWeight: '600', cursor: 'pointer'}}>+ Add</button>
             )}
           </div>
+
           {show && user.role === 'ADMIN' && (
-            <div className="am-card p-4 grid gap-3">
-              <input type="date" className="p-2 bg-[#2c2c2e] rounded-lg text-white" value={form.date} onChange={e => setForm({...form, date: e.target.value})} />
-              <input placeholder="Absent Teacher" className="p-2 bg-[#2c2c2e] rounded-lg text-white" value={form.absent_teacher} onChange={e => setForm({...form, absent_teacher: e.target.value})} />
-              <input placeholder="Proxy Teacher" className="p-2 bg-[#2c2c2e] rounded-lg text-white" value={form.proxy_teacher} onChange={e => setForm({...form, proxy_teacher: e.target.value})} />
-              <div className="grid grid-cols-2 gap-2">
-                <input placeholder="Class" className="p-2 bg-[#2c2c2e] rounded-lg text-white" value={form.class_room} onChange={e => setForm({...form, class_room: e.target.value})} />
-                <input placeholder="Subject" className="p-2 bg-[#2c2c2e] rounded-lg text-white" value={form.subject} onChange={e => setForm({...form, subject: e.target.value})} />
+            <div className="card">
+              <input type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} />
+              <input placeholder="Absent Teacher" value={form.absent_teacher} onChange={e => setForm({...form, absent_teacher: e.target.value})} />
+              <input placeholder="Proxy Teacher" value={form.proxy_teacher} onChange={e => setForm({...form, proxy_teacher: e.target.value})} />
+              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px'}}>
+                <input placeholder="Class" value={form.class_room} onChange={e => setForm({...form, class_room: e.target.value})} />
+                <input placeholder="Subject" value={form.subject} onChange={e => setForm({...form, subject: e.target.value})} />
               </div>
-              <button onClick={() => { if(form.date && form.proxy_teacher){ add(form); setShow(false); setForm({date:'',absent_teacher:'',proxy_teacher:'',class_room:'',subject:''}); }}} className="bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-2 rounded-lg">Assign</button>
+              <button className="btn-primary" onClick={() => {
+                if (form.date && form.proxy_teacher) {
+                  add(form);
+                  setShow(false);
+                  setForm({ date: '', absent_teacher: '', proxy_teacher: '', class_room: '', subject: '' });
+                }
+              }}>Assign Proxy</button>
             </div>
           )}
-          {data.length === 0 ? <p className="text-center text-gray-400 py-8">No proxy classes</p> :
+
+          {data.length === 0 ? (
+            <p style={{textAlign: 'center', color: '#8e8e93', padding: '40px 0'}}>No proxy classes</p>
+          ) : (
             data.map(p => (
-              <div key={p.id} className="am-card p-4 border-l-4 border-red-500">
-                <div className="flex justify-between text-xs mb-2">
-                  <span className="bg-red-500/20 text-red-400 px-2 py-1 rounded-full">{p.date}</span>
-                  <span className="bg-[#2c2c2e] px-2 py-1 rounded-full">{p.class_room}</span>
+              <div key={p.id} className="card" style={{borderLeft: '4px solid #ff2d55'}}>
+                <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '12px'}}>
+                  <span style={{background: 'rgba(255,45,85,0.2)', color: '#ff2d55', padding: '3px 8px', borderRadius: '10px'}}>{p.date}</span>
+                  <span style={{background: '#2c2c2e', padding: '3px 8px', borderRadius: '10px'}}>{p.class_room}</span>
                 </div>
-                <div className="flex gap-3 text-sm">
-                  <div className="flex-1"><p className="text-gray-400 text-xs">Substitute</p><p className="font-semibold">{p.proxy_teacher}</p></div>
-                  <div className="flex-1"><p className="text-gray-400 text-xs">Replacing</p><p className="line-through text-gray-400">{p.absent_teacher}</p></div>
+                <div style={{display: 'flex', gap: '16px', marginBottom: '8px'}}>
+                  <div style={{flex: 1}}>
+                    <div style={{fontSize: '11px', color: '#8e8e93'}}>Substitute</div>
+                    <div style={{fontWeight: '600'}}>{p.proxy_teacher}</div>
+                  </div>
+                  <div style={{flex: 1}}>
+                    <div style={{fontSize: '11px', color: '#8e8e93'}}>Replacing</div>
+                    <div style={{textDecoration: 'line-through', color: '#8e8e93'}}>{p.absent_teacher}</div>
+                  </div>
                 </div>
-                <p className="text-sm mt-2 pt-2 border-t border-[#2c2c2e]">Subject: {p.subject}</p>
+                <div style={{fontSize: '13px', borderTop: '1px solid #2c2c2e', paddingTop: '8px'}}>Subject: {p.subject}</div>
               </div>
             ))
-          }
+          )}
         </div>
       );
     }
@@ -349,32 +433,40 @@
     function Users() {
       const { data, add } = useCollection('users');
       const [show, setShow] = useState(false);
-      const [form, setForm] = useState({ username:'', password:'', full_name:'', role:'TEACHER' });
+      const [form, setForm] = useState({ username: '', password: '', full_name: '', role: 'TEACHER' });
 
       return (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">Manage Users</h2>
-            <button onClick={() => setShow(!show)} className="bg-red-500/10 text-red-500 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-1"><IconPlus /> Add</button>
+        <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+            <h2 style={{fontSize: '22px', fontWeight: 'bold'}}>Manage Users</h2>
+            <button onClick={() => setShow(!show)} style={{background: 'rgba(255,45,85,0.15)', color: '#ff2d55', border: 'none', borderRadius: '20px', padding: '8px 14px', fontSize: '13px', fontWeight: '600', cursor: 'pointer'}}>+ Add</button>
           </div>
+
           {show && (
-            <div className="am-card p-4 grid gap-3">
-              <input placeholder="Full Name" className="p-2 bg-[#2c2c2e] rounded-lg text-white" value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} />
-              <input placeholder="Login ID" className="p-2 bg-[#2c2c2e] rounded-lg text-white" value={form.username} onChange={e => setForm({...form, username: e.target.value})} />
-              <input placeholder="Password" className="p-2 bg-[#2c2c2e] rounded-lg text-white" value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
-              <select className="p-2 bg-[#2c2c2e] rounded-lg text-white" value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
+            <div className="card">
+              <input placeholder="Full Name" value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} />
+              <input placeholder="Login ID" value={form.username} onChange={e => setForm({...form, username: e.target.value})} />
+              <input placeholder="Password" value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
+              <select value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
                 <option value="TEACHER">Teacher</option>
                 <option value="ADMIN">Admin</option>
                 <option value="DOCTOR">Doctor</option>
                 <option value="MAINTENANCE">Maintenance</option>
               </select>
-              <button onClick={() => { if(form.username && form.password && form.full_name){ add(form); setShow(false); setForm({username:'',password:'',full_name:'',role:'TEACHER'}); }}} className="bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-2 rounded-lg">Create</button>
+              <button className="btn-primary" onClick={() => {
+                if (form.username && form.password && form.full_name) {
+                  add(form);
+                  setShow(false);
+                  setForm({ username: '', password: '', full_name: '', role: 'TEACHER' });
+                }
+              }}>Create User</button>
             </div>
           )}
+
           {data.map(u => (
-            <div key={u.id} className="am-card p-4">
-              <p className="font-medium">{u.full_name}</p>
-              <p className="text-xs text-gray-400">@{u.username} · {u.role}</p>
+            <div key={u.id} className="card">
+              <div style={{fontWeight: '600'}}>{u.full_name}</div>
+              <div style={{fontSize: '12px', color: '#8e8e93'}}>@{u.username} · {u.role}</div>
             </div>
           ))}
         </div>
