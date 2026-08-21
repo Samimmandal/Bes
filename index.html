@@ -28,7 +28,6 @@
 
     const SUPABASE_URL = 'https://peiybuhnozgqatdyrdhf.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlaXlidWhub3pncWF0ZHlyZGhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzIyNDEsImV4cCI6MjEwMjU0ODI0MX0.a_1otAvBMRa20HSA01jcvtCbxwUpXNbmCzVmA9Qm-DE';
-
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // Icons
@@ -88,7 +87,7 @@
           .maybeSingle();
 
         if (error) return alert('Database error: ' + error.message);
-        if (!data) return alert('Invalid Login ID or Password.\nUse the Login ID (e.g. 0000), not Full Name.');
+        if (!data) return alert('Invalid Login ID or Password');
 
         setUser({ id: data.username, name: data.full_name, role: data.role });
       };
@@ -120,7 +119,6 @@
             </button>
           </aside>
 
-          {/* Main Content */}
           <div className="flex-1 flex flex-col min-h-screen">
             {/* Mobile Header */}
             <header className="header px-4 py-4 flex justify-between items-center sticky top-0 z-20 md:hidden">
@@ -133,11 +131,8 @@
               </button>
             </header>
 
-            {/* Desktop Header */}
             <header className="hidden md:flex header px-6 py-4 justify-between items-center sticky top-0 z-20">
-              <div>
-                <h2 className="text-lg font-semibold capitalize">{tab === 'schedule' ? 'Proxy Schedule' : tab}</h2>
-              </div>
+              <h2 className="text-lg font-semibold capitalize">{tab === 'schedule' ? 'Proxy Schedule' : tab}</h2>
               <div className="text-sm text-gray-400">{user.name} · {user.role}</div>
             </header>
 
@@ -150,7 +145,6 @@
               {tab === 'users' && user.role === 'ADMIN' && <Users />}
             </main>
 
-            {/* Mobile Bottom Nav */}
             <nav className="bottom-nav fixed bottom-0 left-0 right-0 flex justify-around py-3 z-20 md:hidden">
               <NavBtn active={tab==='home'} onClick={() => setTab('home')} icon={<IconHome />} label="Home" />
               <NavBtn active={tab==='notices'} onClick={() => setTab('notices')} icon={<IconClipboard />} label="Notices" />
@@ -186,9 +180,13 @@
         <div className="min-h-screen flex items-center justify-center p-4">
           <div className="w-full max-w-sm">
             <div className="text-center mb-8">
-              <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center mb-4 text-white">
-                <IconUser />
-              </div>
+              {/* School Logo */}
+              <img 
+                src="logo.png" 
+                alt="Bes An Noor Model School Logo" 
+                className="w-28 h-28 mx-auto mb-5 object-contain"
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
               <h1 className="text-2xl font-bold">Bes An Noor Model School</h1>
               <p className="text-gray-400 mt-1">(Boys' Unit)</p>
             </div>
@@ -215,7 +213,7 @@
         }]);
         if (error) alert(error.message.includes('duplicate') ? 'Login ID already exists' : error.message);
         else {
-          alert(`Account created!\n\nLogin ID: ${form.username.trim()}\nPassword: ${form.password.trim()}\n\nPlease save these.`);
+          alert(`Account created!\n\nLogin ID: ${form.username.trim()}\nPassword: ${form.password.trim()}`);
           onSuccess();
         }
       };
@@ -245,6 +243,45 @@
       const mine = attendance.find(a => a.date === today && a.teacher_id === user.id);
       const todayList = attendance.filter(a => a.date === today);
 
+      const [showAbsentForm, setShowAbsentForm] = useState(false);
+      const [absentData, setAbsentData] = useState({
+        reason: '',
+        from_date: today,
+        to_date: '',
+        leave_time: 'Morning',
+        return_date: '',
+        return_time: ''
+      });
+
+      const markPresent = () => {
+        add({
+          date: today,
+          teacher_id: user.id,
+          name: user.name,
+          status: 'PRESENT'
+        });
+      };
+
+      const submitAbsent = () => {
+        if (!absentData.reason || !absentData.to_date || !absentData.return_date) {
+          return alert('Please fill Reason, To Date and Return Date');
+        }
+        add({
+          date: today,
+          teacher_id: user.id,
+          name: user.name,
+          status: 'ABSENT',
+          reason: absentData.reason,
+          from_date: absentData.from_date,
+          to_date: absentData.to_date,
+          leave_time: absentData.leave_time,
+          return_date: absentData.return_date,
+          return_time: absentData.return_time
+        });
+        setShowAbsentForm(false);
+        setAbsentData({ reason: '', from_date: today, to_date: '', leave_time: 'Morning', return_date: '', return_time: '' });
+      };
+
       return (
         <div className="space-y-6 max-w-4xl">
           <div className="card p-5 flex items-center gap-4">
@@ -257,48 +294,112 @@
             </div>
           </div>
 
-          {/* Attendance - Present + Absent buttons */}
+          {/* Attendance Section */}
           <div className="card p-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h3 className="font-bold text-lg mb-1">Daily Attendance</h3>
+            <p className="text-sm text-gray-400 mb-4">{new Date().toDateString()}</p>
+
+            {mine ? (
               <div>
-                <h3 className="font-bold text-lg">Daily Attendance</h3>
-                <p className="text-sm text-gray-400">{new Date().toDateString()}</p>
-              </div>
-              {mine ? (
                 <span className={`inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium ${mine.status === 'PRESENT' ? 'text-green-400 bg-green-500/10' : 'text-orange-400 bg-orange-500/10'}`}>
                   {mine.status === 'PRESENT' ? <><IconCheck /> Present</> : 'Absent'}
                 </span>
-              ) : (
-                <div className="flex gap-3">
-                  <button 
-                    onClick={() => add({ date: today, teacher_id: user.id, name: user.name, status: 'PRESENT' })} 
-                    className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-5 py-2.5 rounded-full text-sm font-semibold"
-                  >
-                    Present
+                {mine.status === 'ABSENT' && (
+                  <div className="mt-4 text-sm bg-[#252528] p-4 rounded-xl space-y-1">
+                    <p><span className="text-gray-400">Reason:</span> {mine.reason}</p>
+                    <p><span className="text-gray-400">From:</span> {mine.from_date} → {mine.to_date}</p>
+                    <p><span className="text-gray-400">Leaving:</span> {mine.leave_time}</p>
+                    <p><span className="text-gray-400">Return:</span> {mine.return_date} {mine.return_time}</p>
+                  </div>
+                )}
+              </div>
+            ) : showAbsentForm ? (
+              <div className="space-y-3">
+                <textarea 
+                  placeholder="Reason for absence *" 
+                  className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[80px]"
+                  value={absentData.reason}
+                  onChange={e => setAbsentData({...absentData, reason: e.target.value})}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">From Date</label>
+                    <input type="date" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={absentData.from_date} onChange={e => setAbsentData({...absentData, from_date: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">To Date *</label>
+                    <input type="date" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={absentData.to_date} onChange={e => setAbsentData({...absentData, to_date: e.target.value})} />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 mb-1 block">Leaving Time</label>
+                  <select className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={absentData.leave_time} onChange={e => setAbsentData({...absentData, leave_time: e.target.value})}>
+                    <option value="Morning">Morning</option>
+                    <option value="Afternoon">Afternoon</option>
+                    <option value="Evening">Evening</option>
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Return Date *</label>
+                    <input type="date" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={absentData.return_date} onChange={e => setAbsentData({...absentData, return_date: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Return Time</label>
+                    <input type="time" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={absentData.return_time} onChange={e => setAbsentData({...absentData, return_time: e.target.value})} />
+                  </div>
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button onClick={submitAbsent} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-xl font-semibold">
+                    Submit Absent
                   </button>
-                  <button 
-                    onClick={() => add({ date: today, teacher_id: user.id, name: user.name, status: 'ABSENT' })} 
-                    className="bg-[#2c2c2e] text-orange-400 border border-orange-500/40 px-5 py-2.5 rounded-full text-sm font-semibold"
-                  >
-                    Absent
+                  <button onClick={() => setShowAbsentForm(false)} className="px-5 bg-[#2c2c2e] text-gray-300 rounded-xl">
+                    Cancel
                   </button>
                 </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="flex gap-3">
+                <button 
+                  onClick={markPresent}
+                  className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-full text-sm font-semibold"
+                >
+                  Present
+                </button>
+                <button 
+                  onClick={() => setShowAbsentForm(true)}
+                  className="flex-1 bg-[#2c2c2e] text-orange-400 border border-orange-500/40 py-3 rounded-full text-sm font-semibold"
+                >
+                  Absent
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Admin sees only today's attendance */}
+          {/* Admin Attendance Overview */}
           {user.role === 'ADMIN' && (
             <div className="card p-5">
               <h3 className="font-semibold mb-4">Today's Attendance Overview</h3>
               {todayList.length === 0 ? (
                 <p className="text-sm text-gray-400">No one has marked attendance yet.</p>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-3">
                   {todayList.map(a => (
-                    <div key={a.id} className="flex justify-between items-center bg-[#252528] rounded-xl px-4 py-3 text-sm">
-                      <span>{a.name}</span>
-                      <span className={a.status === 'PRESENT' ? 'text-green-400 font-medium' : 'text-orange-400 font-medium'}>{a.status}</span>
+                    <div key={a.id} className="bg-[#252528] rounded-xl p-4">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">{a.name}</span>
+                        <span className={`text-sm font-medium ${a.status === 'PRESENT' ? 'text-green-400' : 'text-orange-400'}`}>
+                          {a.status}
+                        </span>
+                      </div>
+                      {a.status === 'ABSENT' && (
+                        <div className="mt-3 text-xs text-gray-400 space-y-1 border-t border-gray-700 pt-3">
+                          <p><b>Reason:</b> {a.reason}</p>
+                          <p><b>Period:</b> {a.from_date} → {a.to_date}</p>
+                          <p><b>Leaving:</b> {a.leave_time}</p>
+                          <p><b>Return:</b> {a.return_date} {a.return_time}</p>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -306,7 +407,6 @@
             </div>
           )}
 
-          {/* Quick Actions */}
           <div>
             <h3 className="font-semibold mb-3 text-gray-300">Quick Actions</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -378,70 +478,29 @@
           </div>
 
           <div className="flex bg-[#1c1c1e] p-1 rounded-xl">
-            <button onClick={() => setType('medical')} className={`flex-1 py-2 rounded-lg text-sm font-medium ${type==='medical' ? 'bg-[#2c2c2e] text-white' : 'text-gray-400'}`}>
-              Medical
-            </button>
-            <button onClick={() => setType('facility')} className={`flex-1 py-2 rounded-lg text-sm font-medium ${type==='facility' ? 'bg-[#2c2c2e] text-white' : 'text-gray-400'}`}>
-              Facility / Home
-            </button>
+            <button onClick={() => setType('medical')} className={`flex-1 py-2 rounded-lg text-sm font-medium ${type==='medical' ? 'bg-[#2c2c2e] text-white' : 'text-gray-400'}`}>Medical</button>
+            <button onClick={() => setType('facility')} className={`flex-1 py-2 rounded-lg text-sm font-medium ${type==='facility' ? 'bg-[#2c2c2e] text-white' : 'text-gray-400'}`}>Facility / Home</button>
           </div>
 
           {show && isTeacher && (
             <div className="card p-5 space-y-3">
               {type === 'medical' ? (
                 <>
-                  <input
-                    placeholder="Student Name *"
-                    className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white"
-                    value={form.student_name}
-                    onChange={e => setForm({...form, student_name: e.target.value})}
-                  />
+                  <input placeholder="Student Name *" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.student_name} onChange={e => setForm({...form, student_name: e.target.value})} />
                   <div className="grid grid-cols-2 gap-3">
-                    <input
-                      placeholder="Class"
-                      className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white"
-                      value={form.class_name}
-                      onChange={e => setForm({...form, class_name: e.target.value})}
-                    />
-                    <input
-                      placeholder="Registration No"
-                      className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white"
-                      value={form.reg}
-                      onChange={e => setForm({...form, reg: e.target.value})}
-                    />
+                    <input placeholder="Class" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.class_name} onChange={e => setForm({...form, class_name: e.target.value})} />
+                    <input placeholder="Registration No" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.reg} onChange={e => setForm({...form, reg: e.target.value})} />
                   </div>
-                  <textarea
-                    placeholder="What problem does the student have? *"
-                    className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[100px]"
-                    value={form.description}
-                    onChange={e => setForm({...form, description: e.target.value})}
-                  />
+                  <textarea placeholder="What problem does the student have? *" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[100px]" value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
                 </>
               ) : (
                 <>
-                  <input
-                    placeholder="Issue Type (e.g. Electrical, Water) *"
-                    className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white"
-                    value={form.issue_type}
-                    onChange={e => setForm({...form, issue_type: e.target.value})}
-                  />
-                  <input
-                    placeholder="Location"
-                    className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white"
-                    value={form.location}
-                    onChange={e => setForm({...form, location: e.target.value})}
-                  />
-                  <textarea
-                    placeholder="Describe the problem *"
-                    className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[100px]"
-                    value={form.description}
-                    onChange={e => setForm({...form, description: e.target.value})}
-                  />
+                  <input placeholder="Issue Type (e.g. Electrical, Water) *" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.issue_type} onChange={e => setForm({...form, issue_type: e.target.value})} />
+                  <input placeholder="Location" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.location} onChange={e => setForm({...form, location: e.target.value})} />
+                  <textarea placeholder="Describe the problem *" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[100px]" value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
                 </>
               )}
-              <button onClick={submit} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">
-                Submit Report
-              </button>
+              <button onClick={submit} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">Submit Report</button>
             </div>
           )}
 
@@ -453,21 +512,13 @@
                 <div key={item.id} className={`card p-5 border-l-4 ${item.status === 'RESOLVED' ? 'border-green-500 opacity-70' : 'border-red-500'}`}>
                   <div className="flex justify-between items-start mb-2">
                     <h4 className="font-bold">{type === 'medical' ? item.student_name : item.type}</h4>
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${item.status === 'RESOLVED' ? 'bg-green-500/20 text-green-400' : 'bg-orange-500/20 text-orange-400'}`}>
-                      {item.status}
-                    </span>
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${item.status === 'RESOLVED' ? 'bg-green-500/20 text-green-400' : 'bg-orange-500/20 text-orange-400'}`}>{item.status}</span>
                   </div>
                   <p className="text-xs text-gray-400 mb-2">Location: {item.room || item.location}</p>
                   <p className="text-sm bg-[#252528] p-3 rounded-lg mb-2">{item.description}</p>
                   <p className="text-xs text-gray-500 text-right">Reported by: {item.reported_by}</p>
-
-                  {item.status !== 'RESOLVED' && (
-                    (type === 'medical' && canResolveMed) || (type === 'facility' && canResolveMaint)
-                  ) && (
-                    <button
-                      onClick={() => type === 'medical' ? upMed(item.id, { status: 'RESOLVED' }) : upMaint(item.id, { status: 'RESOLVED' })}
-                      className="mt-3 w-full bg-[#2c2c2e] hover:bg-[#3a3a3c] text-white py-2 rounded-xl text-sm font-medium flex items-center justify-center gap-2"
-                    >
+                  {item.status !== 'RESOLVED' && ((type === 'medical' && canResolveMed) || (type === 'facility' && canResolveMaint)) && (
+                    <button onClick={() => type === 'medical' ? upMed(item.id, { status: 'RESOLVED' }) : upMaint(item.id, { status: 'RESOLVED' })} className="mt-3 w-full bg-[#2c2c2e] hover:bg-[#3a3a3c] text-white py-2 rounded-xl text-sm font-medium flex items-center justify-center gap-2">
                       <IconCheck /> Mark as Resolved
                     </button>
                   )}
@@ -495,9 +546,6 @@
             <div>
               <p className="text-xs text-gray-400 mb-1">Login ID</p>
               <p className="font-medium text-red-400 text-lg">{user.id}</p>
-            </div>
-            <div className="pt-3 border-t border-[#2c2c2e]">
-              <p className="text-xs text-gray-400">Password is hidden for security. Contact Admin if you forgot it.</p>
             </div>
           </div>
         </div>
@@ -557,7 +605,6 @@
               </button>
             )}
           </div>
-
           {show && user.role === 'ADMIN' && (
             <div className="card p-5 grid gap-3">
               <input type="date" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.date} onChange={e => setForm({...form, date: e.target.value})} />
@@ -570,7 +617,6 @@
               <button onClick={() => { if(form.date && form.proxy_teacher){ add(form); setShow(false); setForm({date:'',absent_teacher:'',proxy_teacher:'',class_room:'',subject:''}); }}} className="bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">Assign Proxy</button>
             </div>
           )}
-
           {data.length === 0 ? (
             <p className="text-center text-gray-400 py-12">No proxy classes scheduled</p>
           ) : (
