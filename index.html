@@ -88,15 +88,14 @@
           return;
         }
         if (!data) {
-          alert('Invalid Login ID or Password.\n\nMake sure you are using the Login ID (not Full Name).');
+          alert('Invalid Login ID or Password.\n\nUse the Login ID (example: 0000), not the Full Name.');
           return;
         }
 
         setUser({
           id: data.username,
           name: data.full_name,
-          role: data.role,
-          password: data.password   // kept only for profile display
+          role: data.role
         });
       };
 
@@ -121,7 +120,7 @@
           <main className="flex-1 overflow-y-auto px-4 pb-24 pt-4">
             {tab === 'home' && <Home user={user} setTab={setTab} />}
             {tab === 'notices' && <Notices user={user} />}
-            {tab === 'proxy' && <Proxy user={user} />}
+            {tab === 'schedule' && <ScheduleTab user={user} />}
             {tab === 'profile' && <Profile user={user} />}
             {tab === 'users' && user.role === 'ADMIN' && <Users />}
           </main>
@@ -133,7 +132,7 @@
             <button onClick={() => setTab('notices')} className={`flex flex-col items-center gap-1 text-xs ${tab==='notices' ? 'text-red-500' : 'text-gray-400'}`}>
               <IconClipboard /><span>Notices</span>
             </button>
-            <button onClick={() => setTab('proxy')} className={`flex flex-col items-center gap-1 text-xs ${tab==='proxy' ? 'text-red-500' : 'text-gray-400'}`}>
+            <button onClick={() => setTab('schedule')} className={`flex flex-col items-center gap-1 text-xs ${tab==='schedule' ? 'text-red-500' : 'text-gray-400'}`}>
               <IconCalendar /><span>Proxy</span>
             </button>
             <button onClick={() => setTab('profile')} className={`flex flex-col items-center gap-1 text-xs ${tab==='profile' ? 'text-red-500' : 'text-gray-400'}`}>
@@ -274,7 +273,7 @@
               <div className="text-orange-400 mb-2"><IconClipboard /></div>
               <div className="font-semibold text-sm">Notices</div>
             </button>
-            <button onClick={() => setTab('proxy')} className="card p-4 text-left">
+            <button onClick={() => setTab('schedule')} className="card p-4 text-left">
               <div className="text-blue-400 mb-2"><IconCalendar /></div>
               <div className="font-semibold text-sm">Proxy</div>
             </button>
@@ -341,7 +340,8 @@
       );
     }
 
-    function Proxy({ user }) {
+    // Renamed from Proxy → ScheduleTab (this was the bug)
+    function ScheduleTab({ user }) {
       const { data, add } = useCollection('proxies');
       const [show, setShow] = useState(false);
       const [form, setForm] = useState({ date:'', absent_teacher:'', proxy_teacher:'', class_room:'', subject:'' });
