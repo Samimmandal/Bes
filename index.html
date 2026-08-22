@@ -34,6 +34,7 @@
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlaXlidWhub3pncWF0ZHlyZGhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzIyNDEsImV4cCI6MjEwMjU0ODI0MX0.a_1otAvBMRa20HSA01jcvtCbxwUpXNbmCzVmA9Qm-DE';
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    // Icons
     const IconHome = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg></span>;
     const IconClipboard = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></span>;
     const IconCalendar = () => <span className="icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>;
@@ -82,6 +83,7 @@
       return { data, add, update, remove, load };
     }
 
+    // Make links clickable
     function linkify(text) {
       if (!text) return '';
       const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -92,236 +94,13 @@
 
     async function uploadFile(file) {
       if (!file) return null;
-      const fileExt = file.name.split('.').pop();
-      const fileName = Date.now() + '_' + Math.random().toString(36).substring(2) + '.' + fileExt;
-
-      const { data, error } = await supabase.storage
-        .from('school-files')
-        .upload(fileName, file);
-
+      const fileName = `\( {Date.now()}_ \){file.name}`;
+      const { data, error } = await supabase.storage.from('school-files').upload(fileName, file);
       if (error) {
         alert('Upload failed: ' + error.message);
         return null;
       }
-
-      const { data: urlData } = supabase.storage
-        .from('school-files')
-        .getPublicUrl(fileName);
-
-      return urlData.publicUrl;
-    }
-
-    function App() {
-      const [user, setUser] = useState(null);
-      const [tab, setTab] = useState('home');
-
-      const login = async (username, password) => {
-        const cleanUser = username.trim();
-        const cleanPass = password.trim();
-        if (!cleanUser || !cleanPass) return alert('Please enter Login ID and Password');
-
-        const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('username', cleanUser)
-          .eq('password', cleanPass)
-          .maybeSingle();
-
-        if (error) return alert('Database error: ' + error.message);
-        if (!data) return alert('Invalid Login ID or Password');
-
-        setUser({ id: data.username, name: data.full_name, role: data.role, dbId: data.id });
-      };
-
-      if (!user) return <Login onLogin={login} />;
-
-      return (
-        <div className="min-h-screen bg-[#0b0b0e] flex flex-col md:flex-row">
-          <aside className="hidden md:flex md:flex-col md:w-64 bg-[#141416] border-r border-[#2c2c2e] p-4 sticky top-0 h-screen">
-            <div className="mb-8">
-              <h1 className="text-lg font-bold leading-tight">Bes An Noor Model School</h1>
-              <p className="text-xs text-gray-400">(Boys' Unit)</p>
-            </div>
-            <nav className="flex-1 space-y-2">
-              <SideBtn active={tab==='home'} onClick={() => setTab('home')} icon={<IconHome />} label="Home" />
-              <SideBtn active={tab==='notices'} onClick={() => setTab('notices')} icon={<IconClipboard />} label="Notices" />
-              <SideBtn active={tab==='schedule'} onClick={() => setTab('schedule')} icon={<IconCalendar />} label="Proxy / Replace" />
-              <SideBtn active={tab==='report'} onClick={() => setTab('report')} icon={<IconAlert />} label="Report Issue" />
-              <SideBtn active={tab==='chat'} onClick={() => setTab('chat')} icon={<IconChat />} label="Chat" />
-              <SideBtn active={tab==='results'} onClick={() => setTab('results')} icon={<IconFile />} label="Exam Results" />
-              <SideBtn active={tab==='profile'} onClick={() => setTab('profile')} icon={<IconUser />} label="Profile" />
-              {user.role === 'ADMIN' && <SideBtn active={tab==='users'} onClick={() => setTab('users')} icon={<IconUsers />} label="Manage Users" />}
-            </nav>
-            <button onClick={() => { setUser(null); setTab('home'); }} className="mt-4 flex items-center gap-2 text-gray-400 hover:text-white text-sm">
-              <IconLogOut /> Logout
-            </button>
-          </aside>
-
-          <div className="flex-1 flex flex-col min-h-screen">
-            <header className="header px-4 py-4 flex justify-between items-center sticky top-0 z-20 md:hidden">
-              <div>
-                <h1 className="text-base font-bold">Bes An Noor Model School</h1>
-                <p className="text-xs text-gray-400">(Boys' Unit) · {user.name}</p>
-              </div>
-              <button onClick={() => { setUser(null); setTab('home'); }} className="w-10 h-10 rounded-full bg-[#2c2c2e] flex items-center justify-center text-gray-300">
-                <IconLogOut />
-              </button>
-            </header>
-
-            <header className="hidden md:flex header px-6 py-4 justify-between items-center sticky top-0 z-20">
-              <h2 className="text-lg font-semibold capitalize">{tab === 'schedule' ? 'Proxy / Replace' : tab}</h2>
-              <div className="text-sm text-gray-400">{user.name} · {user.role}</div>
-            </header>
-
-            <main className="flex-1 overflow-y-auto px-4 md:px-8 pb-24 md:pb-8 pt-4">
-              {tab === 'home' && <Home user={user} setTab={setTab} />}
-              {tab === 'notices' && <Notices user={user} />}
-              {tab === 'schedule' && <ScheduleTab user={user} />}
-              {tab === 'report' && <ReportTab user={user} />}
-              {tab === 'chat' && <ChatTab user={user} />}
-              {tab === 'results' && <ResultsTab user={user} />}
-              {tab === 'profile' && <Profile user={user} setUser={setUser} setTab={setTab} />}
-              {tab === 'users' && user.role === 'ADMIN' && <Users />}
-            </main>
-
-            <nav className="bottom-nav fixed bottom-0 left-0 right-0 flex justify-around py-2 z-20 md:hidden">
-              <NavBtn active={tab==='home'} onClick={() => setTab('home')} icon={<IconHome />} label="Home" />
-              <NavBtn active={tab==='notices'} onClick={() => setTab('notices')} icon={<IconClipboard />} label="Notices" />
-              <NavBtn active={tab==='schedule'} onClick={() => setTab('schedule')} icon={<IconCalendar />} label="Proxy" />
-              <NavBtn active={tab==='chat'} onClick={() => setTab('chat')} icon={<IconChat />} label="Chat" />
-              <NavBtn active={tab==='profile'} onClick={() => setTab('profile')} icon={<IconUser />} label="Profile" />
-            </nav>
-          </div>
-        </div>
-      );
-    }
-
-    function SideBtn({ active, onClick, icon, label }) {
-      return (
-        <button onClick={onClick} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition ${active ? 'bg-red-500/15 text-red-400' : 'text-gray-400 hover:bg-[#1c1c1e] hover:text-white'}`}>
-         Here is the clear instruction + full fixed code.
-
-### Where to paste:
-
-1. Open your GitHub repository
-2. Click on `index.html`
-3. Click the **pencil icon** (Edit)
-4. **Select all** existing code (`Ctrl + A`) and **delete** it
-5. Paste the full code I am giving below
-6. Click **Commit changes**
-
----
-
-### Full Fixed Code (Copy everything below)
-
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bes An Noor Model School (Boys' Unit)</title>
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0b crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <style>
-    body { background: #0b0b0e; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; color: #fff; }
-    .card { background: #1c1c1e; border-radius: 16px; }
-    .header { background: rgba(11,11,14,0.95); border-bottom: 1px solid #2c2c2e; }
-    .bottom-nav { background: rgba(20,20,23,0.95); border-top: 1px solid #2c2c2e; }
-    .icon { display: inline-flex; align-items: center; justify-content: center; }
-    .icon svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .chat-box { max-height: 55vh; overflow-y: auto; }
-    a { color: #60a5fa; text-decoration: underline; }
-  </style>
-</head>
-<body>
-  <div id="root"></div>
-
-  <script type="text/babel">
-    const { useState, useEffect, useCallback, useRef } = React;
-
-    const SUPABASE_URL = 'https://peiybuhnozgqatdyrdhf.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlaXlidWhub3pncWF0ZHlyZGhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzIyNDEsImV4cCI6MjEwMjU0ODI0MX0.a_1otAvBMRa20HSA01jcvtCbxwUpXNbmCzVmA9Qm-DE';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    const IconHome = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg></span>;
-    const IconClipboard = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></span>;
-    const IconCalendar = () => <span className="icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>;
-    const IconUser = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>;
-    const IconUsers = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span>;
-    const IconLogOut = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>;
-    const IconPlus = () => <span className="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span>;
-    const IconCheck = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>;
-    const IconAlert = () => <span className="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span>;
-    const IconEdit = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>;
-    const IconTrash = () => <span className="icon"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></span>;
-    const IconChat = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span>;
-    const IconFile = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>;
-
-    function useCollection(table) {
-      const [data, setData] = useState([]);
-      const load = useCallback(async () => {
-        const { data: rows } = await supabase.from(table).select('*').order('created_at', { ascending: false });
-        setData(rows || []);
-      }, [table]);
-
-      useEffect(() => {
-        load();
-        const ch = supabase.channel(table).on('postgres_changes', { event: '*', schema: 'public', table }, load).subscribe();
-        return () => supabase.removeChannel(ch);
-      }, [table, load]);
-
-      const add = async (row) => {
-        const { error } = await supabase.from(table).insert([row]);
-        if (error) alert(error.message);
-        else load();
-      };
-
-      const update = async (id, changes) => {
-        const { error } = await supabase.from(table).update(changes).eq('id', id);
-        if (error) alert(error.message);
-        else load();
-      };
-
-      const remove = async (id) => {
-        const { error } = await supabase.from(table).delete().eq('id', id);
-        if (error) alert(error.message);
-        else load();
-      };
-
-      return { data, add, update, remove, load };
-    }
-
-    function linkify(text) {
-      if (!text) return '';
-      const urlRegex = /(https?:\/\/[^\s]+)/g;
-      return text.split(urlRegex).map((part, i) => 
-        urlRegex.test(part) ? <a key={i} href={part} target="_blank" rel="noopener noreferrer">{part}</a> : part
-      );
-    }
-
-    async function uploadFile(file) {
-      if (!file) return null;
-      const fileExt = file.name.split('.').pop();
-      const fileName = Date.now() + '_' + Math.random().toString(36).substring(2) + '.' + fileExt;
-
-      const { data, error } = await supabase.storage
-        .from('school-files')
-        .upload(fileName, file);
-
-      if (error) {
-        alert('Upload failed: ' + error.message);
-        return null;
-      }
-
-      const { data: urlData } = supabase.storage
-        .from('school-files')
-        .getPublicUrl(fileName);
-
+      const { data: urlData } = supabase.storage.from('school-files').getPublicUrl(fileName);
       return urlData.publicUrl;
     }
 
@@ -577,6 +356,7 @@
       );
     }
 
+    // ==================== NOTICES with Comments ====================
     function Notices({ user }) {
       const { data, add, update, remove } = useCollection('notices');
       const { data: comments, add: addComment, remove: removeComment } = useCollection('comments');
@@ -601,7 +381,7 @@
 
       const postComment = (noticeId) => {
         if (!commentText[noticeId]?.trim()) return;
-        addComment({ target_type: 'notice', target_id: String(noticeId), user_name: user.name, content: commentText[noticeId] });
+        addComment({ target_type: 'notice', target_id: noticeId, user_name: user.name, content: commentText[noticeId] });
         setCommentText({ ...commentText, [noticeId]: '' });
       };
 
@@ -629,7 +409,7 @@
           {data.length === 0 && <p className="text-center text-gray-400 py-12">No notices yet</p>}
           <div className="space-y-4">
             {data.map(n => {
-              const noticeComments = comments.filter(c => c.target_type === 'notice' && c.target_id === String(n.id));
+              const noticeComments = comments.filter(c => c.target_type === 'notice' && c.target_id === n.id);
               return (
                 <div key={n.id} className="card p-5 border-l-4 border-red-500">
                   <div className="flex justify-between items-start">
@@ -651,6 +431,7 @@
                     </a>
                   )}
 
+                  {/* Comments */}
                   <div className="mt-4 border-t border-[#2c2c2e] pt-3">
                     <p className="text-xs text-gray-400 mb-2">Comments ({noticeComments.length})</p>
                     {noticeComments.map(c => (
@@ -682,6 +463,7 @@
       );
     }
 
+    // ==================== PROXY / REPLACE ====================
     function ScheduleTab({ user }) {
       const { data, add, update, remove } = useCollection('proxies');
       const { data: comments, add: addComment, remove: removeComment } = useCollection('comments');
@@ -702,7 +484,7 @@
 
       const postComment = (id) => {
         if (!commentText[id]?.trim()) return;
-        addComment({ target_type: 'proxy', target_id: String(id), user_name: user.name, content: commentText[id] });
+        addComment({ target_type: 'proxy', target_id: id, user_name: user.name, content: commentText[id] });
         setCommentText({ ...commentText, [id]: '' });
       };
 
@@ -743,7 +525,7 @@
           {todayItems.length === 0 ? <p className="text-center text-gray-400 py-12">No classes for today</p> : (
             <div className="space-y-4">
               {todayItems.map(p => {
-                const itemComments = comments.filter(c => c.target_type === 'proxy' && c.target_id === String(p.id));
+                const itemComments = comments.filter(c => c.target_type === 'proxy' && c.target_id === p.id);
                 return (
                   <div key={p.id} className="card p-5 border-l-4 border-red-500">
                     <div className="flex justify-between items-start mb-3">
@@ -764,6 +546,7 @@
                     </div>
                     <p className="text-sm border-t border-[#2c2c2e] pt-3">Subject: {p.subject}</p>
 
+                    {/* Comments */}
                     <div className="mt-4 border-t border-[#2c2c2e] pt-3">
                       <p className="text-xs text-gray-400 mb-2">Comments ({itemComments.length})</p>
                       {itemComments.map(c => (
@@ -789,6 +572,7 @@
       );
     }
 
+    // ==================== REPORT (Medical + Facility) ====================
     function ReportTab({ user }) {
       const { data: medical, add: addMed, update: upMed } = useCollection('medical');
       const { data: maint, add: addMaint, update: upMaint } = useCollection('maintenance');
@@ -880,6 +664,7 @@
       );
     }
 
+    // ==================== CHAT ====================
     function ChatTab({ user }) {
       const { data, add, remove } = useCollection('chat_messages');
       const [message, setMessage] = useState('');
@@ -929,12 +714,15 @@
               <input value={message} onChange={e => setMessage(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()} placeholder="Type a message..." className="flex-1 p-3 bg-[#2c2c2e] rounded-xl text-white" />
               <button onClick={send} className="bg-gradient-to-r from-red-500 to-pink-500 px-5 rounded-xl font-semibold">Send</button>
             </div>
-            <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e => setFile(e.target.files[0])} className="text-sm text-gray-400" />
+            {(user.role === 'ADMIN' || user.role === 'TEACHER' || user.role === 'DOCTOR') && (
+              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e => setFile(e.target.files[0])} className="text-sm text-gray-400" />
+            )}
           </div>
         </div>
       );
     }
 
+    // ==================== EXAM RESULTS ====================
     function ResultsTab({ user }) {
       const { data, add, remove } = useCollection('exam_results');
       const [show, setShow] = useState(false);
@@ -999,6 +787,7 @@
       );
     }
 
+    // ==================== PROFILE ====================
     function Profile({ user, setUser, setTab }) {
       const [showEdit, setShowEdit] = useState(false);
       const [newLoginId, setNewLoginId] = useState(user.id);
@@ -1049,4 +838,75 @@
                   {newPass && <input type="password" placeholder="Confirm New Password" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} />}
                   <div className="flex gap-3">
                     <button onClick={saveChanges} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-xl font-semibold">Save Changes</button>
-                    <button onClick={() => { setShowEdit(false); setNewLoginId(user.id
+                    <button onClick={() => { setShowEdit(false); setNewLoginId(user.id); setNewPass(''); setConfirmPass(''); }} className="px-5 bg-[#2c2c2e] text-gray-300 rounded-xl">Cancel</button>
+                  </div>
+                </div>
+              )}
+
+              {user.role === 'ADMIN' && (
+                <button onClick={() => setTab('users')} className="w-full bg-red-500/15 text-red-400 py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2 mt-2">
+                  <IconUsers /> Manage Users
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ==================== USERS ====================
+    function Users() {
+      const { data, add, remove } = useCollection('users');
+      const [show, setShow] = useState(false);
+      const [form, setForm] = useState({ username:'', password:'', full_name:'', role:'TEACHER' });
+
+      return (
+        <div className="space-y-5 max-w-3xl">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold">Manage Users</h2>
+            <button onClick={() => setShow(!show)} className="bg-red-500/15 text-red-400 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2">
+              <IconPlus /> Create Login ID
+            </button>
+          </div>
+
+          {show && (
+            <div className="card p-5 grid gap-3">
+              <input placeholder="Full Name" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} />
+              <input placeholder="Login ID" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.username} onChange={e => setForm({...form, username: e.target.value})} />
+              <input placeholder="Temporary Password" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
+              <select className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
+                <option value="TEACHER">Teacher</option>
+                <option value="DOCTOR">Doctor</option>
+                <option value="MAINTENANCE">Maintenance</option>
+                <option value="ADMIN">Admin</option>
+              </select>
+              <button onClick={() => { 
+                if(form.username && form.password && form.full_name){ 
+                  add(form); setShow(false); setForm({username:'',password:'',full_name:'',role:'TEACHER'}); 
+                  alert('Login ID created successfully!');
+                } else alert('Please fill all fields');
+              }} className="bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">Create Login ID</button>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {data.map(u => (
+              <div key={u.id} className="card p-4 flex justify-between items-center">
+                <div>
+                  <p className="font-medium">{u.full_name}</p>
+                  <p className="text-xs text-gray-400 mt-1">{u.role}</p>
+                </div>
+                <button onClick={() => { if(confirm(`Delete ${u.full_name}?`)) remove(u.id); }} className="text-red-400 p-2 hover:bg-red-500/10 rounded-lg">
+                  <IconTrash />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
