@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bes An Noor Model School (Boys' Unit)</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body { background: #0b0b0e; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; color: #fff; }
+    .card { background: #1c1c1e; border-radius: 16px; }
+    .header { background: rgba(11,11,14,0.95); border-bottom: 1px solid #2c2c2e; }
+    .bottom-nav { background: rgba(20,20,23,0.95); border-top: 1px solid #2c2c2e; }
+    .icon { display: inline-flex; align-items: center; justify-content: center; }
+    .icon svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useCallback } = React;
+
+    const SUPABASE_URL = 'https://peiybuhnozgqatdyrdhf.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlaXlidWhub3pncWF0ZHlyZGhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzIyNDEsImV4cCI6MjEwMjU0ODI0MX0.a_1otAvBMRa20HSA01jcvtCbxwUpXNbmCzVmA9Qm-DE';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const IconHome = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg></span>;
+    const IconClipboard = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/><path d="M9 13l2 2 4-4"/></svg></span>;
+    const IconCalendar = () => <span className="icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>;
+    const IconUser = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>;
+    const IconUsers = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span>;
+    const IconLogOut = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>;
+    const IconPlus = () => <span className="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span>;
+    const IconCheck = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>;
+    const IconAlert = () => <span className="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span>;
+
+    function useCollection(table) {
+      const [data, setData] = useState([]);
+      const load = useCallback(async () => {
+        const { data: rows } = await supabase.from(table).select('*').order('created_at', { ascending: false });
+        setData(rows || []);
+      }, [table]);
+
+      useEffect(() => {
+        load();
+        const ch = supabase.channel(table).on('postgres_changes', { event: '*', schema: 'public', table }, load).subscribe();
+        return () => supabase.removeChannel(ch);
+      }, [table, load]);
+
+      const add = async (row) => {
+        const { error } = await supabase.from(table).insert([row]);
+        if (error) alert(error.message);
+        else load();
+      };
+
+      const update = async (id, changes) => {
+        const { error } = await supabase.from(table).update(changes).eq('id', id);
+        if (error) alert(error.message);
+        else load();
+      };
+
+      return { data, add, update };
+    }
+
+    function App() {
+      const [user, setUser] = useState(null);
+      const [tab, setTab] = useState('home');
+
+      const login = async (username, password) => {
+        const cleanUser = username.trim();
+        const cleanPass = password.trim();
+        if (!cleanUser || !cleanPass) return alert('Please enter Login ID and Password');
+
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('username', cleanUser)
+          .eq('password', cleanPass)
+          .maybeSingle();
+
+        if (error) return alert('Database error: ' + error.message);
+        if (!data) return alert('Invalid Login ID or Password');
+
+        setUser({ id: data.username, name: data.full_name, role: data.role });
+      };
+
+      if (!user) {
+        return <Login onLogin={login} />;
+      }
+
+      return (
+        <div className="min-h-screen bg-[#0b0b0e] flex flex-col md:flex-row">
+          <aside className="hidden md:flex md:flex-col md:w-64 bg-[#141416] border-r border-[#2c2c2e] p-4 sticky top-0 h-screen">
+            <div className="mb-8">
+              <h1 className="text-lg font-bold leading-tight">Bes An Noor Model School</h1>
+              <p className="text-xs text-gray-400">(Boys' Unit)</p>
+            </div>
+            <nav className="flex-1 space-y-2">
+              <SideBtn active={tab==='home'} onClick={() => setTab('home')} icon={<IconHome />} label="Home" />
+              <SideBtn active={tab==='notices'} onClick={() => setTab('notices')} icon={<IconClipboard />} label="Notices" />
+              <SideBtn active={tab==='schedule'} onClick={() => setTab('schedule')} icon={<IconCalendar />} label="Proxy" />
+              <SideBtn active={tab==='report'} onClick={() => setTab('report')} icon={<IconAlert />} label="Report Issue" />
+              <SideBtn active={tab==='profile'} onClick={() => setTab('profile')} icon={<IconUser />} label="Profile" />
+              {user.role === 'ADMIN' && <SideBtn active={tab==='users'} onClick={() => setTab('users')} icon={<IconUsers />} label="Manage Users" />}
+            </nav>
+            <button onClick={() => { setUser(null); setTab('home'); }} className="mt-4 flex items-center gap-2 text-gray-400 hover:text-white text-sm">
+              <IconLogOut /> Logout
+            </button>
+          </aside>
+
+          <div className="flex-1 flex flex-col min-h-screen">
+            <header className="header px-4 py-4 flex justify-between items-center sticky top-0 z-20 md:hidden">
+              <div>
+                <h1 className="text-base font-bold">Bes An Noor Model School</h1>
+                <p className="text-xs text-gray-400">(Boys' Unit) · {user.name}</p>
+              </div>
+              <button onClick={() => { setUser(null); setTab('home'); }} className="p-2 rounded-full bg-[#2c2c2e] text-gray-400">
+                <IconLogOut />
+              </button>
+            </header>
+
+            <header className="hidden md:flex header px-6 py-4 justify-between items-center sticky top-0 z-20">
+              <h2 className="text-lg font-semibold capitalize">{tab === 'schedule' ? 'Proxy Schedule' : tab}</h2>
+              <div className="text-sm text-gray-400">{user.name} · {user.role}</div>
+            </header>
+
+            <main className="flex-1 overflow-y-auto px-4 md:px-8 pb-24 md:pb-8 pt-4">
+              {tab === 'home' && <Home user={user} setTab={setTab} />}
+              {tab === 'notices' && <Notices user={user} />}
+              {tab === 'schedule' && <ScheduleTab user={user} />}
+              {tab === 'report' && <ReportTab user={user} />}
+              {tab === 'profile' && <Profile user={user} />}
+              {tab === 'users' && user.role === 'ADMIN' && <Users />}
+            </main>
+
+            <nav className="bottom-nav fixed bottom-0 left-0 right-0 flex justify-around py-3 z-20 md:hidden">
+              <NavBtn active={tab==='home'} onClick={() => setTab('home')} icon={<IconHome />} label="Home" />
+              <NavBtn active={tab==='notices'} onClick={() => setTab('notices')} icon={<IconClipboard />} label="Notices" />
+              <NavBtn active={tab==='schedule'} onClick={() => setTab('schedule')} icon={<IconCalendar />} label="Proxy" />
+              <NavBtn active={tab==='report'} onClick={() => setTab('report')} icon={<IconAlert />} label="Report" />
+              <NavBtn active={tab==='profile'} onClick={() => setTab('profile')} icon={<IconUser />} label="Profile" />
+            </nav>
+          </div>
+        </div>
+      );
+    }
+
+    function SideBtn({ active, onClick, icon, label }) {
+      return (
+        <button onClick={onClick} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition ${active ? 'bg-red-500/15 text-red-400' : 'text-gray-400 hover:bg-[#1c1c1e] hover:text-white'}`}>
+          {icon} {label}
+        </button>
+      );
+    }
+
+    function NavBtn({ active, onClick, icon, label }) {
+      return (
+        <button onClick={onClick} className={`flex flex-col items-center gap-1 text-xs ${active ? 'text-red-500' : 'text-gray-400'}`}>
+          {icon}<span>{label}</span>
+        </button>
+      );
+    }
+
+    function Login({ onLogin }) {
+      const [id, setId] = useState('');
+      const [pass, setPass] = useState('');
+      return (
+        <div className="min-h-screen flex items-center justify-center p-4">
+          <div className="w-full max-w-sm">
+            <div className="text-center mb-8">
+              <img src="logo.png" alt="Logo" className="w-32 h-32 mx-auto mb-5 object-contain" onError={(e)=>{e.target.style.display='none'}} />
+              <h1 className="text-2xl font-bold">Bes An Noor Model School</h1>
+              <p className="text-gray-400 mt-1">(Boys' Unit)</p>
+            </div>
+            <div className="card p-6 space-y-4">
+              <input value={id} onChange={e => setId(e.target.value)} placeholder="Login ID" className="w-full p-3 bg-[#2c2c2e] rounded-xl border border-[#3a3a3c] text-white" />
+              <input type="password" value={pass} onChange={e => setPass(e.target.value)} placeholder="Password" className="w-full p-3 bg-[#2c2c2e] rounded-xl border border-[#3a3a3c] text-white" />
+              <button onClick={() => onLogin(id, pass)} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">Continue</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function Home({ user, setTab }) {
+      const { data: attendance, add, update } = useCollection('attendance');
+      const today = new Date().toISOString().split('T')[0];
+      const mine = attendance.find(a => a.date === today && a.teacher_id === user.id);
+      const todayList = attendance.filter(a => a.date === today);
+
+      const [showAbsentForm, setShowAbsentForm] = useState(false);
+      const [absentData, setAbsentData] = useState({
+        reason: '', from_date: today, to_date: '', leave_time: 'Morning', return_date: '', return_time: ''
+      });
+
+      const markPresent = async () => {
+        if (mine) {
+          await update(mine.id, { status: 'PRESENT', reason: null, from_date: null, to_date: null, leave_time: null, return_date: null, return_time: null });
+        } else {
+          add({ date: today, teacher_id: user.id, name: user.name, status: 'PRESENT' });
+        }
+        setShowAbsentForm(false);
+      };
+
+      const submitAbsent = async () => {
+        if (!absentData.reason || !absentData.to_date || !absentData.return_date) {
+          return alert('Please fill Reason, To Date and Return Date');
+        }
+        const payload = {
+          date: today, teacher_id: user.id, name: user.name, status: 'ABSENT',
+          reason: absentData.reason, from_date: absentData.from_date, to_date: absentData.to_date,
+          leave_time: absentData.leave_time, return_date: absentData.return_date, return_time: absentData.return_time
+        };
+        if (mine) await update(mine.id, payload);
+        else add(payload);
+        setShowAbsentForm(false);
+        setAbsentData({ reason: '', from_date: today, to_date: '', leave_time: 'Morning', return_date: '', return_time: '' });
+      };
+
+      return (
+        <div className="space-y-6 max-w-4xl">
+          <div className="card p-5 flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center text-white">
+              <IconUser />
+            </div>
+            <div>
+              <h2 className="font-bold text-xl">Welcome, {user.name}</h2>
+              <p className="text-sm text-gray-400">{user.role}</p>
+            </div>
+          </div>
+
+          <div className="card p-5">
+            <h3 className="font-bold text-lg mb-1">Daily Attendance</h3>
+            <p className="text-sm text-gray-400 mb-4">{new Date().toDateString()}</p>
+
+            {mine && (
+              <div className="mb-4">
+                <span className={`inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium ${mine.status === 'PRESENT' ? 'text-green-400 bg-green-500/10' : 'text-orange-400 bg-orange-500/10'}`}>
+                  Current Status: {mine.status}
+                </span>
+                {mine.status === 'ABSENT' && (
+                  <div className="mt-3 text-sm bg-[#252528] p-4 rounded-xl space-y-1">
+                    <p><span className="text-gray-400">Reason:</span> {mine.reason}</p>
+                    <p><span className="text-gray-400">From:</span> {mine.from_date} → {mine.to_date}</p>
+                    <p><span className="text-gray-400">Leaving:</span> {mine.leave_time}</p>
+                    <p><span className="text-gray-400">Return:</span> {mine.return_date} {mine.return_time}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!showAbsentForm ? (
+              <div className="flex gap-3">
+                <button onClick={markPresent} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-full text-sm font-semibold">Present</button>
+                <button onClick={() => setShowAbsentForm(true)} className="flex-1 bg-[#2c2c2e] text-orange-400 border border-orange-500/40 py-3 rounded-full text-sm font-semibold">Absent</button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <textarea placeholder="Reason for absence *" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[80px]" value={absentData.reason} onChange={e => setAbsentData({...absentData, reason: e.target.value})} />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">From Date</label>
+                    <input type="date" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={absentData.from_date} onChange={e => setAbsentData({...absentData, from_date: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">To Date *</label>
+                    <input type="date" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={absentData.to_date} onChange={e => setAbsentData({...absentData, to_date: e.target.value})} />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 mb-1 block">Leaving Time</label>
+                  <select className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={absentData.leave_time} onChange={e => setAbsentData({...absentData, leave_time: e.target.value})}>
+                    <option value="Morning">Morning</option>
+                    <option value="Afternoon">Afternoon</option>
+                    <option value="Evening">Evening</option>
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Return Date *</label>
+                    <input type="date" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={absentData.return_date} onChange={e => setAbsentData({...absentData, return_date: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Return Time</label>
+                    <input type="time" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={absentData.return_time} onChange={e => setAbsentData({...absentData, return_time: e.target.value})} />
+                  </div>
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button onClick={submitAbsent} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-xl font-semibold">Submit Absent</button>
+                  <button onClick={() => setShowAbsentForm(false)} className="px-5 bg-[#2c2c2e] text-gray-300 rounded-xl">Cancel</button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {user.role === 'ADMIN' && (
+            <div className="card p-5">
+              <h3 className="font-semibold mb-4">Today's Attendance Overview</h3>
+              {todayList.length === 0 ? (
+                <p className="text-sm text-gray-400">No one has marked attendance yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {todayList.map(a => (
+                    <div key={a.id} className="bg-[#252528] rounded-xl p-4">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">{a.name}</span>
+                        <span className={`text-sm font-medium ${a.status === 'PRESENT' ? 'text-green-400' : 'text-orange-400'}`}>{a.status}</span>
+                      </div>
+                      {a.status === 'ABSENT' && (
+                        <div className="mt-3 text-xs text-gray-400 space-y-1 border-t border-gray-700 pt-3">
+                          <p><b>Reason:</b> {a.reason}</p>
+                          <p><b>Period:</b> {a.from_date} → {a.to_date}</p>
+                          <p><b>Leaving:</b> {a.leave_time}</p>
+                          <p><b>Return:</b> {a.return_date} {a.return_time}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div>
+            <h3 className="font-semibold mb-3 text-gray-300">Quick Actions</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <ActionCard icon={<IconClipboard />} title="Notices" onClick={() => setTab('notices')} />
+              <ActionCard icon={<IconCalendar />} title="Proxy" onClick={() => setTab('schedule')} />
+              <ActionCard icon={<IconAlert />} title="Report Issue" onClick={() => setTab('report')} />
+              <ActionCard icon={<IconUser />} title="My Profile" onClick={() => setTab('profile')} />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function ActionCard({ icon, title, onClick }) {
+      return (
+        <button onClick={onClick} className="card p-4 text-left hover:bg-[#252528] transition">
+          <div className="text-red-400 mb-2">{icon}</div>
+          <div className="font-semibold text-sm">{title}</div>
+        </button>
+      );
+    }
+
+    function ReportTab({ user }) {
+      const { data: medical, add: addMed, update: upMed } = useCollection('medical');
+      const { data: maint, add: addMaint, update: upMaint } = useCollection('maintenance');
+      const [type, setType] = useState('medical');
+      const [show, setShow] = useState(false);
+      const [form, setForm] = useState({ student_name: '', class_name: '', reg: '', description: '', issue_type: '', location: '' });
+
+      const isTeacher = user.role === 'TEACHER';
+      const canResolveMed = user.role === 'DOCTOR' || user.role === 'ADMIN';
+      const canResolveMaint = user.role === 'MAINTENANCE' || user.role === 'ADMIN';
+
+      const submit = () => {
+        if (type === 'medical') {
+          if (!form.student_name || !form.description) return alert('Student Name and Problem are required');
+          addMed({
+            student_name: form.student_name,
+            room: `Class: ${form.class_name || 'N/A'} | Reg: ${form.reg || 'N/A'}`,
+            description: form.description,
+            reported_by: user.name,
+            status: 'PENDING'
+          });
+        } else {
+          if (!form.issue_type || !form.description) return alert('Issue Type and Description are required');
+          addMaint({
+            type: form.issue_type,
+            location: form.location || 'N/A',
+            description: form.description,
+            reported_by: user.name,
+            status: 'PENDING'
+          });
+        }
+        setShow(false);
+        setForm({ student_name: '', class_name: '', reg: '', description: '', issue_type: '', location: '' });
+      };
+
+      const list = type === 'medical' ? medical : maint;
+
+      return (
+        <div className="space-y-5 max-w-3xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <h2 className="text-2xl font-bold">Report Issues</h2>
+            {isTeacher && (
+              <button onClick={() => setShow(!show)} className="bg-red-500/15 text-red-400 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2">
+                <IconPlus /> New Report
+              </button>
+            )}
+          </div>
+
+          <div className="flex bg-[#1c1c1e] p-1 rounded-xl">
+            <button onClick={() => setType('medical')} className={`flex-1 py-2 rounded-lg text-sm font-medium ${type==='medical' ? 'bg-[#2c2c2e] text-white' : 'text-gray-400'}`}>Medical</button>
+            <button onClick={() => setType('facility')} className={`flex-1 py-2 rounded-lg text-sm font-medium ${type==='facility' ? 'bg-[#2c2c2e] text-white' : 'text-gray-400'}`}>Facility / Home</button>
+          </div>
+
+          {show && isTeacher && (
+            <div className="card p-5 space-y-3">
+              {type === 'medical' ? (
+                <>
+                  <input placeholder="Student Name *" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.student_name} onChange={e => setForm({...form, student_name: e.target.value})} />
+                  <div className="grid grid-cols-2 gap-3">
+                    <input placeholder="Class" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.class_name} onChange={e => setForm({...form, class_name: e.target.value})} />
+                    <input placeholder="Registration No" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.reg} onChange={e => setForm({...form, reg: e.target.value})} />
+                  </div>
+                  <textarea placeholder="What problem does the student have? *" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[100px]" value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
+                </>
+              ) : (
+                <>
+                  <input placeholder="Issue Type (e.g. Electrical, Water) *" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.issue_type} onChange={e => setForm({...form, issue_type: e.target.value})} />
+                  <input placeholder="Location" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.location} onChange={e => setForm({...form, location: e.target.value})} />
+                  <textarea placeholder="Describe the problem *" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[100px]" value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
+                </>
+              )}
+              <button onClick={submit} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">Submit Report</button>
+            </div>
+          )}
+
+          {list.length === 0 ? (
+            <p className="text-center text-gray-400 py-12">No issues reported yet</p>
+          ) : (
+            <div className="space-y-3">
+              {list.map(item => (
+                <div key={item.id} className={`card p-5 border-l-4 ${item.status === 'RESOLVED' ? 'border-green-500 opacity-70' : 'border-red-500'}`}>
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-bold">{type === 'medical' ? item.student_name : item.type}</h4>
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${item.status === 'RESOLVED' ? 'bg-green-500/20 text-green-400' : 'bg-orange-500/20 text-orange-400'}`}>{item.status}</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mb-2">Location: {item.room || item.location}</p>
+                  <p className="text-sm bg-[#252528] p-3 rounded-lg mb-2">{item.description}</p>
+                  <p className="text-xs text-gray-500 text-right">Reported by: {item.reported_by}</p>
+                  {item.status !== 'RESOLVED' && ((type === 'medical' && canResolveMed) || (type === 'facility' && canResolveMaint)) && (
+                    <button onClick={() => type === 'medical' ? upMed(item.id, { status: 'RESOLVED' }) : upMaint(item.id, { status: 'RESOLVED' })} className="mt-3 w-full bg-[#2c2c2e] hover:bg-[#3a3a3c] text-white py-2 rounded-xl text-sm font-medium flex items-center justify-center gap-2">
+                      <IconCheck /> Mark as Resolved
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function Profile({ user }) {
+      const [showChange, setShowChange] = useState(false);
+      const [newPass, setNewPass] = useState('');
+      const [confirmPass, setConfirmPass] = useState('');
+
+      const changePassword = async () => {
+        if (!newPass || newPass.length < 4) return alert('Password must be at least 4 characters');
+        if (newPass !== confirmPass) return alert('Passwords do not match');
+
+        const { error } = await supabase
+          .from('users')
+          .update({ password: newPass.trim() })
+          .eq('username', user.id);
+
+        if (error) alert(error.message);
+        else {
+          alert('Password changed successfully!');
+          setShowChange(false);
+          setNewPass('');
+          setConfirmPass('');
+        }
+      };
+
+      return (
+        <div className="space-y-5 max-w-lg">
+          <h2 className="text-2xl font-bold">My Profile</h2>
+          <div className="card p-6 space-y-5">
+            <div>
+              <p className="text-xs text-gray-400 mb-1">Full Name</p>
+              <p className="font-medium text-lg">{user.name}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 mb-1">Role</p>
+              <p className="font-medium">{user.role}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 mb-1">Login ID</p>
+              <p className="font-medium text-red-400 text-lg">{user.id}</p>
+            </div>
+
+            <div className="pt-4 border-t border-[#2c2c2e]">
+              {!showChange ? (
+                <button onClick={() => setShowChange(true)} className="w-full bg-[#2c2c2e] hover:bg-[#3a3a3c] text-white py-3 rounded-xl text-sm font-medium">
+                  Change Password
+                </button>
+              ) : (
+                <div className="space-y-3">
+                  <input type="password" placeholder="New Password" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={newPass} onChange={e => setNewPass(e.target.value)} />
+                  <input type="password" placeholder="Confirm New Password" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} />
+                  <div className="flex gap-3">
+                    <button onClick={changePassword} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-xl font-semibold">Save Password</button>
+                    <button onClick={() => setShowChange(false)} className="px-5 bg-[#2c2c2e] text-gray-300 rounded-xl">Cancel</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function Notices({ user }) {
+      const { data, add } = useCollection('notices');
+      const [show, setShow] = useState(false);
+      const [title, setTitle] = useState('');
+      const [content, setContent] = useState('');
+
+      return (
+        <div className="space-y-5 max-w-3xl">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold">Notices</h2>
+            {user.role === 'ADMIN' && (
+              <button onClick={() => setShow(!show)} className="text-red-500 bg-red-500/10 p-2 rounded-full"><IconPlus /></button>
+            )}
+          </div>
+          {show && (
+            <div className="card p-5 space-y-3">
+              <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" />
+              <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Write notice..." className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[100px]" />
+              <button onClick={() => { if(title && content){ add({ title, content, type:'text', author: user.name }); setShow(false); setTitle(''); setContent(''); }}} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">Publish</button>
+            </div>
+          )}
+          {data.length === 0 && <p className="text-center text-gray-400 py-12">No notices yet</p>}
+          <div className="space-y-3">
+            {data.map(n => (
+              <div key={n.id} className="card p-5 border-l-4 border-red-500">
+                <h3 className="font-bold text-lg">{n.title}</h3>
+                <p className="text-xs text-gray-400 mb-3">By {n.author}</p>
+                <p className="text-sm whitespace-pre-wrap leading-relaxed">{n.content}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    function ScheduleTab({ user }) {
+      const { data, add } = useCollection('proxies');
+      const [show, setShow] = useState(false);
+      const [form, setForm] = useState({ date:'', absent_teacher:'', proxy_teacher:'', class_room:'', subject:'' });
+
+      return (
+        <div className="space-y-5 max-w-3xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-2xl font-bold">Proxy Schedule</h2>
+              <p className="text-sm text-gray-400">Substitution roster</p>
+            </div>
+            {user.role === 'ADMIN' && (
+              <button onClick={() => setShow(!show)} className="bg-red-500/15 text-red-400 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2">
+                <IconPlus /> Add Proxy
+              </button>
+            )}
+          </div>
+          {show && user.role === 'ADMIN' && (
+            <div className="card p-5 grid gap-3">
+              <input type="date" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.date} onChange={e => setForm({...form, date: e.target.value})} />
+              <input placeholder="Absent Teacher" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.absent_teacher} onChange={e => setForm({...form, absent_teacher: e.target.value})} />
+              <input placeholder="Proxy Teacher" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.proxy_teacher} onChange={e => setForm({...form, proxy_teacher: e.target.value})} />
+              <div className="grid grid-cols-2 gap-3">
+                <input placeholder="Class" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.class_room} onChange={e => setForm({...form, class_room: e.target.value})} />
+                <input placeholder="Subject" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.subject} onChange={e => setForm({...form, subject: e.target.value})} />
+              </div>
+              <button onClick={() => { if(form.date && form.proxy_teacher){ add(form); setShow(false); setForm({date:'',absent_teacher:'',proxy_teacher:'',class_room:'',subject:''}); }}} className="bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">Assign Proxy</button>
+            </div>
+          )}
+          {data.length === 0 ? (
+            <p className="text-center text-gray-400 py-12">No proxy classes scheduled</p>
+          ) : (
+            <div className="space-y-3">
+              {data.map(p => (
+                <div key={p.id} className="card p-5 border-l-4 border-red-500">
+                  <div className="flex justify-between text-xs mb-3">
+                    <span className="bg-red-500/20 text-red-400 px-3 py-1 rounded-full">{p.date}</span>
+                    <span className="bg-[#2c2c2e] px-3 py-1 rounded-full">{p.class_room}</span>
+                  </div>
+                  <div className="flex gap-6 text-sm mb-3">
+                    <div className="flex-1">
+                      <p className="text-gray-400 text-xs mb-1">Substitute</p>
+                      <p className="font-semibold">{p.proxy_teacher}</p>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-gray-400 text-xs mb-1">Replacing</p>
+                      <p className="line-through text-gray-400">{p.absent_teacher}</p>
+                    </div>
+                  </div>
+                  <p className="text-sm border-t border-[#2c2c2e] pt-3">Subject: {p.subject}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function Users() {
+      const { data, add } = useCollection('users');
+      const [show, setShow] = useState(false);
+      const [form, setForm] = useState({ username:'', password:'', full_name:'', role:'TEACHER' });
+
+      return (
+        <div className="space-y-5 max-w-3xl">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold">Manage Users</h2>
+            <button onClick={() => setShow(!show)} className="bg-red-500/15 text-red-400 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2">
+              <IconPlus /> Create Login ID
+            </button>
+          </div>
+
+          {show && (
+            <div className="card p-5 grid gap-3">
+              <p className="text-sm text-gray-400 mb-1">Admin creates Login ID + Temporary Password. User can change password later from Profile.</p>
+              <input placeholder="Full Name" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} />
+              <input placeholder="Login ID (e.g. t001)" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.username} onChange={e => setForm({...form, username: e.target.value})} />
+              <input placeholder="Temporary Password" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
+              <select className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
+                <option value="TEACHER">Teacher</option>
+                <option value="DOCTOR">Doctor</option>
+                <option value="MAINTENANCE">Maintenance</option>
+                <option value="ADMIN">Admin</option>
+              </select>
+              <button onClick={() => { 
+                if(form.username && form.password && form.full_name){ 
+                  add(form); 
+                  setShow(false); 
+                  setForm({username:'',password:'',full_name:'',role:'TEACHER'}); 
+                  alert('Login ID created successfully!\n\nGive this Login ID and Temporary Password to the person.');
+                } else {
+                  alert('Please fill all fields');
+                }
+              }} className="bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">
+                Create Login ID
+              </button>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {data.map(u => (
+              <div key={u.id} className="card p-4">
+                <p className="font-medium">{u.full_name}</p>
+                <p className="text-xs text-gray-400 mt-1">{u.role}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
