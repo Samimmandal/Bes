@@ -87,7 +87,7 @@
         if (error) return alert('Database error: ' + error.message);
         if (!data) return alert('Invalid Login ID or Password');
 
-        setUser({ id: data.username, name: data.full_name, role: data.role, dbId: data.id });
+        setUser({ id: data.username, name: data.full_name, role: data.role });
       };
 
       if (!user) {
@@ -125,8 +125,9 @@
               </button>
             </header>
 
-            <header className="hidden md:flex headerHere is the **complete final code**.  
-Copy everything from `<!DOCTYPE html>` to the last `</html>` and paste it into your `index.html`.
+            <header className="hidden md:flex header px-6 py-4 justify-between items-center sticky top-0Here is the **clean final code**.
+
+Copy **everything** from the first line to the last line and paste it into a new `index.html` file.
 
 ```html
 <!DOCTYPE html>
@@ -138,7 +139,7 @@ Copy everything from `<!DOCTYPE html>` to the last `</html>` and paste it into y
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script crossorigin src="://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -218,7 +219,7 @@ Copy everything from `<!DOCTYPE html>` to the last `</html>` and paste it into y
         if (error) return alert('Database error: ' + error.message);
         if (!data) return alert('Invalid Login ID or Password');
 
-        setUser({ id: data.username, name: data.full_name, role: data.role, dbId: data.id });
+        setUser({ id: data.username, name: data.full_name, role: data.role });
       };
 
       if (!user) {
