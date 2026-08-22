@@ -39,6 +39,8 @@
     const IconPlus = () => <span className="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span>;
     const IconCheck = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>;
     const IconAlert = () => <span className="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span>;
+    const IconEdit = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>;
+    const IconTrash = () => <span className="icon"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></span>;
 
     function useCollection(table) {
       const [data, setData] = useState([]);
@@ -65,7 +67,13 @@
         else load();
       };
 
-      return { data, add, update };
+      const remove = async (id) => {
+        const { error } = await supabase.from(table).delete().eq('id', id);
+        if (error) alert(error.message);
+        else load();
+      };
+
+      return { data, add, update, remove };
     }
 
     function App() {
@@ -512,32 +520,66 @@
     }
 
     function Notices({ user }) {
-      const { data, add } = useCollection('notices');
+      const { data, add, update, remove } = useCollection('notices');
       const [show, setShow] = useState(false);
+      const [editId, setEditId] = useState(null);
       const [title, setTitle] = useState('');
       const [content, setContent] = useState('');
+
+      const startEdit = (n) => {
+        setEditId(n.id);
+        setTitle(n.title);
+        setContent(n.content);
+        setShow(true);
+      };
+
+      const save = () => {
+        if (!title || !content) return alert('Please fill title and content');
+        if (editId) {
+          update(editId, { title, content });
+        } else {
+          add({ title, content, type: 'text', author: user.name });
+        }
+        setShow(false);
+        setEditId(null);
+        setTitle('');
+        setContent('');
+      };
 
       return (
         <div className="space-y-5 max-w-3xl">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold">Notices</h2>
             {user.role === 'ADMIN' && (
-              <button onClick={() => setShow(!show)} className="text-red-500 bg-red-500/10 p-2 rounded-full"><IconPlus /></button>
+              <button onClick={() => { setShow(!show); setEditId(null); setTitle(''); setContent(''); }} className="text-red-500 bg-red-500/10 p-2 rounded-full"><IconPlus /></button>
             )}
           </div>
-          {show && (
+          {show && user.role === 'ADMIN' && (
             <div className="card p-5 space-y-3">
               <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" />
               <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Write notice..." className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[100px]" />
-              <button onClick={() => { if(title && content){ add({ title, content, type:'text', author: user.name }); setShow(false); setTitle(''); setContent(''); }}} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">Publish</button>
+              <div className="flex gap-3">
+                <button onClick={save} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">{editId ? 'Update Notice' : 'Publish'}</button>
+                {editId && <button onClick={() => { setShow(false); setEditId(null); }} className="px-5 bg-[#2c2c2e] rounded-xl">Cancel</button>}
+              </div>
             </div>
           )}
           {data.length === 0 && <p className="text-center text-gray-400 py-12">No notices yet</p>}
           <div className="space-y-3">
             {data.map(n => (
               <div key={n.id} className="card p-5 border-l-4 border-red-500">
-                <h3 className="font-bold text-lg">{n.title}</h3>
-                <p className="text-xs text-gray-400 mb-3">By {n.author}</p>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-bold text-lg">{n.title}</h3>
+                    <p className="text-xs text-gray-400 mb-3">By {n.author}</p>
+                  </div>
+                  {user.role === 'ADMIN' && (
+                    <div className="flex gap-2">
+                      <button onClick={() => startEdit(n)} className="text-blue-400 p-1"><IconEdit /></button>
+                      <button onClick={() => { if(confirm('Delete this notice?')) remove(n.id); }} className="text-red-400 p-1"><IconTrash /></button>
+                    </div>
+                  )}
+                </div>
                 <p className="text-sm whitespace-pre-wrap leading-relaxed">{n.content}</p>
               </div>
             ))}
@@ -547,23 +589,46 @@
     }
 
     function ScheduleTab({ user }) {
-      const { data, add } = useCollection('proxies');
+      const { data, add, update, remove } = useCollection('proxies');
+      const today = new Date().toISOString().split('T')[0];
+      const todayProxies = data.filter(p => p.date === today);
+
       const [show, setShow] = useState(false);
-      const [form, setForm] = useState({ date:'', absent_teacher:'', proxy_teacher:'', class_room:'', subject:'' });
+      const [editId, setEditId] = useState(null);
+      const [form, setForm] = useState({ date: today, absent_teacher: '', proxy_teacher: '', class_room: '', subject: '' });
+
+      const startEdit = (p) => {
+        setEditId(p.id);
+        setForm({ date: p.date, absent_teacher: p.absent_teacher, proxy_teacher: p.proxy_teacher, class_room: p.class_room, subject: p.subject });
+        setShow(true);
+      };
+
+      const save = () => {
+        if (!form.date || !form.proxy_teacher) return alert('Date and Proxy Teacher are required');
+        if (editId) {
+          update(editId, form);
+        } else {
+          add(form);
+        }
+        setShow(false);
+        setEditId(null);
+        setForm({ date: today, absent_teacher: '', proxy_teacher: '', class_room: '', subject: '' });
+      };
 
       return (
         <div className="space-y-5 max-w-3xl">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-2xl font-bold">Proxy Schedule</h2>
-              <p className="text-sm text-gray-400">Substitution roster</p>
+              <p className="text-sm text-gray-400">Today's substitution only</p>
             </div>
             {user.role === 'ADMIN' && (
-              <button onClick={() => setShow(!show)} className="bg-red-500/15 text-red-400 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2">
+              <button onClick={() => { setShow(!show); setEditId(null); setForm({ date: today, absent_teacher: '', proxy_teacher: '', class_room: '', subject: '' }); }} className="bg-red-500/15 text-red-400 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2">
                 <IconPlus /> Add Proxy
               </button>
             )}
           </div>
+
           {show && user.role === 'ADMIN' && (
             <div className="card p-5 grid gap-3">
               <input type="date" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.date} onChange={e => setForm({...form, date: e.target.value})} />
@@ -573,18 +638,30 @@
                 <input placeholder="Class" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.class_room} onChange={e => setForm({...form, class_room: e.target.value})} />
                 <input placeholder="Subject" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.subject} onChange={e => setForm({...form, subject: e.target.value})} />
               </div>
-              <button onClick={() => { if(form.date && form.proxy_teacher){ add(form); setShow(false); setForm({date:'',absent_teacher:'',proxy_teacher:'',class_room:'',subject:''}); }}} className="bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">Assign Proxy</button>
+              <div className="flex gap-3">
+                <button onClick={save} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">{editId ? 'Update Proxy' : 'Assign Proxy'}</button>
+                {editId && <button onClick={() => setShow(false)} className="px-5 bg-[#2c2c2e] rounded-xl">Cancel</button>}
+              </div>
             </div>
           )}
-          {data.length === 0 ? (
-            <p className="text-center text-gray-400 py-12">No proxy classes scheduled</p>
+
+          {todayProxies.length === 0 ? (
+            <p className="text-center text-gray-400 py-12">No proxy classes for today</p>
           ) : (
             <div className="space-y-3">
-              {data.map(p => (
+              {todayProxies.map(p => (
                 <div key={p.id} className="card p-5 border-l-4 border-red-500">
-                  <div className="flex justify-between text-xs mb-3">
-                    <span className="bg-red-500/20 text-red-400 px-3 py-1 rounded-full">{p.date}</span>
-                    <span className="bg-[#2c2c2e] px-3 py-1 rounded-full">{p.class_room}</span>
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex gap-2 text-xs">
+                      <span className="bg-red-500/20 text-red-400 px-3 py-1 rounded-full">{p.date}</span>
+                      <span className="bg-[#2c2c2e] px-3 py-1 rounded-full">{p.class_room}</span>
+                    </div>
+                    {user.role === 'ADMIN' && (
+                      <div className="flex gap-2">
+                        <button onClick={() => startEdit(p)} className="text-blue-400 p-1"><IconEdit /></button>
+                        <button onClick={() => { if(confirm('Delete this proxy?')) remove(p.id); }} className="text-red-400 p-1"><IconTrash /></button>
+                      </div>
+                    )}
                   </div>
                   <div className="flex gap-6 text-sm mb-3">
                     <div className="flex-1">
@@ -606,7 +683,7 @@
     }
 
     function Users() {
-      const { data, add } = useCollection('users');
+      const { data, add, remove } = useCollection('users');
       const [show, setShow] = useState(false);
       const [form, setForm] = useState({ username:'', password:'', full_name:'', role:'TEACHER' });
 
@@ -636,7 +713,7 @@
                   add(form); 
                   setShow(false); 
                   setForm({username:'',password:'',full_name:'',role:'TEACHER'}); 
-                  alert('Login ID created successfully!\n\nGive this Login ID and Temporary Password to the person.');
+                  alert('Login ID created successfully!');
                 } else {
                   alert('Please fill all fields');
                 }
@@ -648,9 +725,17 @@
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {data.map(u => (
-              <div key={u.id} className="card p-4">
-                <p className="font-medium">{u.full_name}</p>
-                <p className="text-xs text-gray-400 mt-1">{u.role}</p>
+              <div key={u.id} className="card p-4 flex justify-between items-center">
+                <div>
+                  <p className="font-medium">{u.full_name}</p>
+                  <p className="text-xs text-gray-400 mt-1">{u.role}</p>
+                </div>
+                <button 
+                  onClick={() => { if(confirm(`Delete ${u.full_name}? This user will not be able to login.`)) remove(u.id); }} 
+                  className="text-red-400 p-2 hover:bg-red-500/10 rounded-lg"
+                >
+                  <IconTrash />
+                </button>
               </div>
             ))}
           </div>
