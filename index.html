@@ -1,12 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0b0b0e">
-<meta name="apple-mobile-web-app-capable" content="yes">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bes An Noor Model School (Boys' Unit)</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0b0b0e">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -21,20 +20,23 @@
     .bottom-nav { background: rgba(20,20,23,0.95); border-top: 1px solid #2c2c2e; }
     .icon { display: inline-flex; align-items: center; justify-content: center; }
     .icon svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .chat-box { max-height: 55vh; overflow-y: auto; }
+    a { color: #60a5fa; text-decoration: underline; }
   </style>
 </head>
 <body>
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useCallback } = React;
+    const { useState, useEffect, useCallback, useRef } = React;
 
     const SUPABASE_URL = 'https://peiybuhnozgqatdyrdhf.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlaXlidWhub3pncWF0ZHlyZGhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzIyNDEsImV4cCI6MjEwMjU0ODI0MX0.a_1otAvBMRa20HSA01jcvtCbxwUpXNbmCzVmA9Qm-DE';
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    // Icons
     const IconHome = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg></span>;
-    const IconClipboard = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/><path d="M9 13l2 2 4-4"/></svg></span>;
+    const IconClipboard = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></span>;
     const IconCalendar = () => <span className="icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>;
     const IconUser = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>;
     const IconUsers = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span>;
@@ -44,6 +46,8 @@
     const IconAlert = () => <span className="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span>;
     const IconEdit = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>;
     const IconTrash = () => <span className="icon"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></span>;
+    const IconChat = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span>;
+    const IconFile = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>;
 
     function useCollection(table) {
       const [data, setData] = useState([]);
@@ -76,7 +80,28 @@
         else load();
       };
 
-      return { data, add, update, remove };
+      return { data, add, update, remove, load };
+    }
+
+    // Make links clickable
+    function linkify(text) {
+      if (!text) return '';
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      return text.split(urlRegex).map((part, i) => 
+        urlRegex.test(part) ? <a key={i} href={part} target="_blank" rel="noopener noreferrer">{part}</a> : part
+      );
+    }
+
+    async function uploadFile(file) {
+      if (!file) return null;
+      const fileName = `\( {Date.now()}_ \){file.name}`;
+      const { data, error } = await supabase.storage.from('school-files').upload(fileName, file);
+      if (error) {
+        alert('Upload failed: ' + error.message);
+        return null;
+      }
+      const { data: urlData } = supabase.storage.from('school-files').getPublicUrl(fileName);
+      return urlData.publicUrl;
     }
 
     function App() {
@@ -101,9 +126,7 @@
         setUser({ id: data.username, name: data.full_name, role: data.role, dbId: data.id });
       };
 
-      if (!user) {
-        return <Login onLogin={login} />;
-      }
+      if (!user) return <Login onLogin={login} />;
 
       return (
         <div className="min-h-screen bg-[#0b0b0e] flex flex-col md:flex-row">
@@ -115,8 +138,10 @@
             <nav className="flex-1 space-y-2">
               <SideBtn active={tab==='home'} onClick={() => setTab('home')} icon={<IconHome />} label="Home" />
               <SideBtn active={tab==='notices'} onClick={() => setTab('notices')} icon={<IconClipboard />} label="Notices" />
-              <SideBtn active={tab==='schedule'} onClick={() => setTab('schedule')} icon={<IconCalendar />} label="Proxy" />
+              <SideBtn active={tab==='schedule'} onClick={() => setTab('schedule')} icon={<IconCalendar />} label="Proxy / Replace" />
               <SideBtn active={tab==='report'} onClick={() => setTab('report')} icon={<IconAlert />} label="Report Issue" />
+              <SideBtn active={tab==='chat'} onClick={() => setTab('chat')} icon={<IconChat />} label="Chat" />
+              <SideBtn active={tab==='results'} onClick={() => setTab('results')} icon={<IconFile />} label="Exam Results" />
               <SideBtn active={tab==='profile'} onClick={() => setTab('profile')} icon={<IconUser />} label="Profile" />
               {user.role === 'ADMIN' && <SideBtn active={tab==='users'} onClick={() => setTab('users')} icon={<IconUsers />} label="Manage Users" />}
             </nav>
@@ -126,20 +151,18 @@
           </aside>
 
           <div className="flex-1 flex flex-col min-h-screen">
-            {/* Mobile Header */}
             <header className="header px-4 py-4 flex justify-between items-center sticky top-0 z-20 md:hidden">
               <div>
                 <h1 className="text-base font-bold">Bes An Noor Model School</h1>
                 <p className="text-xs text-gray-400">(Boys' Unit) · {user.name}</p>
               </div>
-              <button onClick={() => { setUser(null); setTab('home'); }} className="w-10 h-10 rounded-full bg-[#2c2c2e] flex items-center justify-center text-gray-300 hover:text-white">
+              <button onClick={() => { setUser(null); setTab('home'); }} className="w-10 h-10 rounded-full bg-[#2c2c2e] flex items-center justify-center text-gray-300">
                 <IconLogOut />
               </button>
             </header>
 
-            {/* Desktop Header */}
             <header className="hidden md:flex header px-6 py-4 justify-between items-center sticky top-0 z-20">
-              <h2 className="text-lg font-semibold capitalize">{tab === 'schedule' ? 'Proxy Schedule' : tab}</h2>
+              <h2 className="text-lg font-semibold capitalize">{tab === 'schedule' ? 'Proxy / Replace' : tab}</h2>
               <div className="text-sm text-gray-400">{user.name} · {user.role}</div>
             </header>
 
@@ -148,16 +171,17 @@
               {tab === 'notices' && <Notices user={user} />}
               {tab === 'schedule' && <ScheduleTab user={user} />}
               {tab === 'report' && <ReportTab user={user} />}
+              {tab === 'chat' && <ChatTab user={user} />}
+              {tab === 'results' && <ResultsTab user={user} />}
               {tab === 'profile' && <Profile user={user} setUser={setUser} setTab={setTab} />}
               {tab === 'users' && user.role === 'ADMIN' && <Users />}
             </main>
 
-            {/* Mobile Bottom Nav */}
-            <nav className="bottom-nav fixed bottom-0 left-0 right-0 flex justify-around py-3 z-20 md:hidden">
+            <nav className="bottom-nav fixed bottom-0 left-0 right-0 flex justify-around py-2 z-20 md:hidden">
               <NavBtn active={tab==='home'} onClick={() => setTab('home')} icon={<IconHome />} label="Home" />
               <NavBtn active={tab==='notices'} onClick={() => setTab('notices')} icon={<IconClipboard />} label="Notices" />
               <NavBtn active={tab==='schedule'} onClick={() => setTab('schedule')} icon={<IconCalendar />} label="Proxy" />
-              <NavBtn active={tab==='report'} onClick={() => setTab('report')} icon={<IconAlert />} label="Report" />
+              <NavBtn active={tab==='chat'} onClick={() => setTab('chat')} icon={<IconChat />} label="Chat" />
               <NavBtn active={tab==='profile'} onClick={() => setTab('profile')} icon={<IconUser />} label="Profile" />
             </nav>
           </div>
@@ -175,7 +199,7 @@
 
     function NavBtn({ active, onClick, icon, label }) {
       return (
-        <button onClick={onClick} className={`flex flex-col items-center gap-1 text-xs ${active ? 'text-red-500' : 'text-gray-400'}`}>
+        <button onClick={onClick} className={`flex flex-col items-center gap-0.5 text-[10px] ${active ? 'text-red-500' : 'text-gray-400'}`}>
           {icon}<span>{label}</span>
         </button>
       );
@@ -207,30 +231,18 @@
       const today = new Date().toISOString().split('T')[0];
       const mine = attendance.find(a => a.date === today && a.teacher_id === user.id);
       const todayList = attendance.filter(a => a.date === today);
-
       const [showAbsentForm, setShowAbsentForm] = useState(false);
-      const [absentData, setAbsentData] = useState({
-        reason: '', from_date: today, to_date: '', leave_time: 'Morning', return_date: '', return_time: ''
-      });
+      const [absentData, setAbsentData] = useState({ reason: '', from_date: today, to_date: '', leave_time: 'Morning', return_date: '', return_time: '' });
 
       const markPresent = async () => {
-        if (mine) {
-          await update(mine.id, { status: 'PRESENT', reason: null, from_date: null, to_date: null, leave_time: null, return_date: null, return_time: null });
-        } else {
-          add({ date: today, teacher_id: user.id, name: user.name, status: 'PRESENT' });
-        }
+        if (mine) await update(mine.id, { status: 'PRESENT', reason: null, from_date: null, to_date: null, leave_time: null, return_date: null, return_time: null });
+        else add({ date: today, teacher_id: user.id, name: user.name, status: 'PRESENT' });
         setShowAbsentForm(false);
       };
 
       const submitAbsent = async () => {
-        if (!absentData.reason || !absentData.to_date || !absentData.return_date) {
-          return alert('Please fill Reason, To Date and Return Date');
-        }
-        const payload = {
-          date: today, teacher_id: user.id, name: user.name, status: 'ABSENT',
-          reason: absentData.reason, from_date: absentData.from_date, to_date: absentData.to_date,
-          leave_time: absentData.leave_time, return_date: absentData.return_date, return_time: absentData.return_time
-        };
+        if (!absentData.reason || !absentData.to_date || !absentData.return_date) return alert('Please fill Reason, To Date and Return Date');
+        const payload = { date: today, teacher_id: user.id, name: user.name, status: 'ABSENT', ...absentData };
         if (mine) await update(mine.id, payload);
         else add(payload);
         setShowAbsentForm(false);
@@ -240,9 +252,7 @@
       return (
         <div className="space-y-6 max-w-4xl">
           <div className="card p-5 flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center text-white">
-              <IconUser />
-            </div>
+            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center text-white"><IconUser /></div>
             <div>
               <h2 className="font-bold text-xl">Welcome, {user.name}</h2>
               <p className="text-sm text-gray-400">{user.role}</p>
@@ -252,10 +262,9 @@
           <div className="card p-5">
             <h3 className="font-bold text-lg mb-1">Daily Attendance</h3>
             <p className="text-sm text-gray-400 mb-4">{new Date().toDateString()}</p>
-
             {mine && (
               <div className="mb-4">
-                <span className={`inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium ${mine.status === 'PRESENT' ? 'text-green-400 bg-green-500/10' : 'text-orange-400 bg-orange-500/10'}`}>
+                <span className={`inline-flex px-4 py-2 rounded-full text-sm font-medium ${mine.status === 'PRESENT' ? 'text-green-400 bg-green-500/10' : 'text-orange-400 bg-orange-500/10'}`}>
                   Current Status: {mine.status}
                 </span>
                 {mine.status === 'ABSENT' && (
@@ -268,7 +277,6 @@
                 )}
               </div>
             )}
-
             {!showAbsentForm ? (
               <div className="flex gap-3">
                 <button onClick={markPresent} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-full text-sm font-semibold">Present</button>
@@ -278,32 +286,17 @@
               <div className="space-y-3">
                 <textarea placeholder="Reason for absence *" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[80px]" value={absentData.reason} onChange={e => setAbsentData({...absentData, reason: e.target.value})} />
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-gray-400 mb-1 block">From Date</label>
-                    <input type="date" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={absentData.from_date} onChange={e => setAbsentData({...absentData, from_date: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-400 mb-1 block">To Date *</label>
-                    <input type="date" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={absentData.to_date} onChange={e => setAbsentData({...absentData, to_date: e.target.value})} />
-                  </div>
+                  <div><label className="text-xs text-gray-400 mb-1 block">From Date</label><input type="date" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={absentData.from_date} onChange={e => setAbsentData({...absentData, from_date: e.target.value})} /></div>
+                  <div><label className="text-xs text-gray-400 mb-1 block">To Date *</label><input type="date" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={absentData.to_date} onChange={e => setAbsentData({...absentData, to_date: e.target.value})} /></div>
                 </div>
-                <div>
-                  <label className="text-xs text-gray-400 mb-1 block">Leaving Time</label>
+                <div><label className="text-xs text-gray-400 mb-1 block">Leaving Time</label>
                   <select className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={absentData.leave_time} onChange={e => setAbsentData({...absentData, leave_time: e.target.value})}>
-                    <option value="Morning">Morning</option>
-                    <option value="Afternoon">Afternoon</option>
-                    <option value="Evening">Evening</option>
+                    <option value="Morning">Morning</option><option value="Afternoon">Afternoon</option><option value="Evening">Evening</option>
                   </select>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Return Date *</label>
-                    <input type="date" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={absentData.return_date} onChange={e => setAbsentData({...absentData, return_date: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Return Time</label>
-                    <input type="time" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={absentData.return_time} onChange={e => setAbsentData({...absentData, return_time: e.target.value})} />
-                  </div>
+                  <div><label className="text-xs text-gray-400 mb-1 block">Return Date *</label><input type="date" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={absentData.return_date} onChange={e => setAbsentData({...absentData, return_date: e.target.value})} /></div>
+                  <div><label className="text-xs text-gray-400 mb-1 block">Return Time</label><input type="time" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={absentData.return_time} onChange={e => setAbsentData({...absentData, return_time: e.target.value})} /></div>
                 </div>
                 <div className="flex gap-3 pt-2">
                   <button onClick={submitAbsent} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-xl font-semibold">Submit Absent</button>
@@ -316,9 +309,7 @@
           {user.role === 'ADMIN' && (
             <div className="card p-5">
               <h3 className="font-semibold mb-4">Today's Attendance Overview</h3>
-              {todayList.length === 0 ? (
-                <p className="text-sm text-gray-400">No one has marked attendance yet.</p>
-              ) : (
+              {todayList.length === 0 ? <p className="text-sm text-gray-400">No one has marked attendance yet.</p> : (
                 <div className="space-y-3">
                   {todayList.map(a => (
                     <div key={a.id} className="bg-[#252528] rounded-xl p-4">
@@ -343,10 +334,12 @@
 
           <div>
             <h3 className="font-semibold mb-3 text-gray-300">Quick Actions</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               <ActionCard icon={<IconClipboard />} title="Notices" onClick={() => setTab('notices')} />
-              <ActionCard icon={<IconCalendar />} title="Proxy" onClick={() => setTab('schedule')} />
+              <ActionCard icon={<IconCalendar />} title="Proxy / Replace" onClick={() => setTab('schedule')} />
               <ActionCard icon={<IconAlert />} title="Report Issue" onClick={() => setTab('report')} />
+              <ActionCard icon={<IconChat />} title="Chat" onClick={() => setTab('chat')} />
+              <ActionCard icon={<IconFile />} title="Exam Results" onClick={() => setTab('results')} />
               <ActionCard icon={<IconUser />} title="My Profile" onClick={() => setTab('profile')} />
             </div>
           </div>
@@ -363,12 +356,229 @@
       );
     }
 
+    // ==================== NOTICES with Comments ====================
+    function Notices({ user }) {
+      const { data, add, update, remove } = useCollection('notices');
+      const { data: comments, add: addComment, remove: removeComment } = useCollection('comments');
+      const [show, setShow] = useState(false);
+      const [editId, setEditId] = useState(null);
+      const [title, setTitle] = useState('');
+      const [content, setContent] = useState('');
+      const [file, setFile] = useState(null);
+      const [commentText, setCommentText] = useState({});
+
+      const save = async () => {
+        if (!title || !content) return alert('Please fill title and content');
+        let file_url = null;
+        if (file) file_url = await uploadFile(file);
+        if (editId) {
+          update(editId, { title, content, file_url: file_url || undefined });
+        } else {
+          add({ title, content, type: 'text', author: user.name, file_url });
+        }
+        setShow(false); setEditId(null); setTitle(''); setContent(''); setFile(null);
+      };
+
+      const postComment = (noticeId) => {
+        if (!commentText[noticeId]?.trim()) return;
+        addComment({ target_type: 'notice', target_id: noticeId, user_name: user.name, content: commentText[noticeId] });
+        setCommentText({ ...commentText, [noticeId]: '' });
+      };
+
+      return (
+        <div className="space-y-5 max-w-3xl">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold">Notices</h2>
+            {user.role === 'ADMIN' && (
+              <button onClick={() => { setShow(!show); setEditId(null); setTitle(''); setContent(''); }} className="text-red-500 bg-red-500/10 p-2 rounded-full"><IconPlus /></button>
+            )}
+          </div>
+
+          {show && user.role === 'ADMIN' && (
+            <div className="card p-5 space-y-3">
+              <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" />
+              <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Write notice... (links will be clickable)" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[100px]" />
+              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e => setFile(e.target.files[0])} className="w-full text-sm text-gray-400" />
+              <div className="flex gap-3">
+                <button onClick={save} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">{editId ? 'Update' : 'Publish'}</button>
+                <button onClick={() => setShow(false)} className="px-5 bg-[#2c2c2e] rounded-xl">Cancel</button>
+              </div>
+            </div>
+          )}
+
+          {data.length === 0 && <p className="text-center text-gray-400 py-12">No notices yet</p>}
+          <div className="space-y-4">
+            {data.map(n => {
+              const noticeComments = comments.filter(c => c.target_type === 'notice' && c.target_id === n.id);
+              return (
+                <div key={n.id} className="card p-5 border-l-4 border-red-500">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-bold text-lg">{n.title}</h3>
+                      <p className="text-xs text-gray-400 mb-2">By {n.author}</p>
+                    </div>
+                    {user.role === 'ADMIN' && (
+                      <div className="flex gap-2">
+                        <button onClick={() => { setEditId(n.id); setTitle(n.title); setContent(n.content); setShow(true); }} className="text-blue-400 p-1"><IconEdit /></button>
+                        <button onClick={() => { if(confirm('Delete?')) remove(n.id); }} className="text-red-400 p-1"><IconTrash /></button>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-sm whitespace-pre-wrap leading-relaxed mb-2">{linkify(n.content)}</p>
+                  {n.file_url && (
+                    <a href={n.file_url} target="_blank" className="text-blue-400 text-sm flex items-center gap-1 mb-3">
+                      <IconFile /> View Attachment
+                    </a>
+                  )}
+
+                  {/* Comments */}
+                  <div className="mt-4 border-t border-[#2c2c2e] pt-3">
+                    <p className="text-xs text-gray-400 mb-2">Comments ({noticeComments.length})</p>
+                    {noticeComments.map(c => (
+                      <div key={c.id} className="bg-[#252528] rounded-lg p-3 mb-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="font-medium text-red-400">{c.user_name}</span>
+                          {(user.role === 'ADMIN' || c.user_name === user.name) && (
+                            <button onClick={() => removeComment(c.id)} className="text-red-400 text-xs">Delete</button>
+                          )}
+                        </div>
+                        <p className="mt-1">{linkify(c.content)}</p>
+                      </div>
+                    ))}
+                    <div className="flex gap-2 mt-2">
+                      <input 
+                        value={commentText[n.id] || ''} 
+                        onChange={e => setCommentText({...commentText, [n.id]: e.target.value})}
+                        placeholder="Write a comment..." 
+                        className="flex-1 p-2 bg-[#2c2c2e] rounded-lg text-sm text-white"
+                      />
+                      <button onClick={() => postComment(n.id)} className="bg-red-500 px-4 rounded-lg text-sm">Post</button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    // ==================== PROXY / REPLACE ====================
+    function ScheduleTab({ user }) {
+      const { data, add, update, remove } = useCollection('proxies');
+      const { data: comments, add: addComment, remove: removeComment } = useCollection('comments');
+      const today = new Date().toISOString().split('T')[0];
+      const todayItems = data.filter(p => p.date === today);
+      const [show, setShow] = useState(false);
+      const [editId, setEditId] = useState(null);
+      const [form, setForm] = useState({ date: today, type: 'PROXY', absent_teacher: '', proxy_teacher: '', class_room: '', subject: '' });
+      const [commentText, setCommentText] = useState({});
+
+      const save = () => {
+        if (!form.date || !form.proxy_teacher) return alert('Date and Teacher are required');
+        if (editId) update(editId, form);
+        else add(form);
+        setShow(false); setEditId(null);
+        setForm({ date: today, type: 'PROXY', absent_teacher: '', proxy_teacher: '', class_room: '', subject: '' });
+      };
+
+      const postComment = (id) => {
+        if (!commentText[id]?.trim()) return;
+        addComment({ target_type: 'proxy', target_id: id, user_name: user.name, content: commentText[id] });
+        setCommentText({ ...commentText, [id]: '' });
+      };
+
+      return (
+        <div className="space-y-5 max-w-3xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-2xl font-bold">Proxy / Replace Classes</h2>
+              <p className="text-sm text-gray-400">Today only</p>
+            </div>
+            {user.role === 'ADMIN' && (
+              <button onClick={() => { setShow(!show); setEditId(null); }} className="bg-red-500/15 text-red-400 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2">
+                <IconPlus /> Add
+              </button>
+            )}
+          </div>
+
+          {show && user.role === 'ADMIN' && (
+            <div className="card p-5 grid gap-3">
+              <select className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.type} onChange={e => setForm({...form, type: e.target.value})}>
+                <option value="PROXY">Proxy Class</option>
+                <option value="REPLACE">Replace Class</option>
+              </select>
+              <input type="date" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.date} onChange={e => setForm({...form, date: e.target.value})} />
+              <input placeholder="Absent / Original Teacher" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.absent_teacher} onChange={e => setForm({...form, absent_teacher: e.target.value})} />
+              <input placeholder="Proxy / Replace Teacher" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.proxy_teacher} onChange={e => setForm({...form, proxy_teacher: e.target.value})} />
+              <div className="grid grid-cols-2 gap-3">
+                <input placeholder="Class" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.class_room} onChange={e => setForm({...form, class_room: e.target.value})} />
+                <input placeholder="Subject" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.subject} onChange={e => setForm({...form, subject: e.target.value})} />
+              </div>
+              <div className="flex gap-3">
+                <button onClick={save} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">{editId ? 'Update' : 'Save'}</button>
+                <button onClick={() => setShow(false)} className="px-5 bg-[#2c2c2e] rounded-xl">Cancel</button>
+              </div>
+            </div>
+          )}
+
+          {todayItems.length === 0 ? <p className="text-center text-gray-400 py-12">No classes for today</p> : (
+            <div className="space-y-4">
+              {todayItems.map(p => {
+                const itemComments = comments.filter(c => c.target_type === 'proxy' && c.target_id === p.id);
+                return (
+                  <div key={p.id} className="card p-5 border-l-4 border-red-500">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex gap-2 text-xs">
+                        <span className={`px-3 py-1 rounded-full ${p.type === 'REPLACE' ? 'bg-blue-500/20 text-blue-400' : 'bg-red-500/20 text-red-400'}`}>{p.type || 'PROXY'}</span>
+                        <span className="bg-[#2c2c2e] px-3 py-1 rounded-full">{p.class_room}</span>
+                      </div>
+                      {user.role === 'ADMIN' && (
+                        <div className="flex gap-2">
+                          <button onClick={() => { setEditId(p.id); setForm(p); setShow(true); }} className="text-blue-400 p-1"><IconEdit /></button>
+                          <button onClick={() => { if(confirm('Delete?')) remove(p.id); }} className="text-red-400 p-1"><IconTrash /></button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-6 text-sm mb-3">
+                      <div className="flex-1"><p className="text-gray-400 text-xs mb-1">Assigned To</p><p className="font-semibold">{p.proxy_teacher}</p></div>
+                      <div className="flex-1"><p className="text-gray-400 text-xs mb-1">Original</p><p className="line-through text-gray-400">{p.absent_teacher}</p></div>
+                    </div>
+                    <p className="text-sm border-t border-[#2c2c2e] pt-3">Subject: {p.subject}</p>
+
+                    {/* Comments */}
+                    <div className="mt-4 border-t border-[#2c2c2e] pt-3">
+                      <p className="text-xs text-gray-400 mb-2">Comments ({itemComments.length})</p>
+                      {itemComments.map(c => (
+                        <div key={c.id} className="bg-[#252528] rounded-lg p-3 mb-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="font-medium text-red-400">{c.user_name}</span>
+                            {(user.role === 'ADMIN' || c.user_name === user.name) && <button onClick={() => removeComment(c.id)} className="text-red-400 text-xs">Delete</button>}
+                          </div>
+                          <p className="mt-1">{linkify(c.content)}</p>
+                        </div>
+                      ))}
+                      <div className="flex gap-2 mt-2">
+                        <input value={commentText[p.id] || ''} onChange={e => setCommentText({...commentText, [p.id]: e.target.value})} placeholder="Write a comment..." className="flex-1 p-2 bg-[#2c2c2e] rounded-lg text-sm text-white" />
+                        <button onClick={() => postComment(p.id)} className="bg-red-500 px-4 rounded-lg text-sm">Post</button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==================== REPORT (Medical + Facility) ====================
     function ReportTab({ user }) {
       const { data: medical, add: addMed, update: upMed } = useCollection('medical');
       const { data: maint, add: addMaint, update: upMaint } = useCollection('maintenance');
       const [type, setType] = useState('medical');
       const [show, setShow] = useState(false);
-      const [form, setForm] = useState({ student_name: '', class_name: '', reg: '', description: '', issue_type: '', location: '' });
+      const [form, setForm] = useState({ student_name: '', class_name: '', reg: '', room_number: '', description: '', issue_type: '', location: '' });
 
       const isTeacher = user.role === 'TEACHER';
       const canResolveMed = user.role === 'DOCTOR' || user.role === 'ADMIN';
@@ -379,23 +589,18 @@
           if (!form.student_name || !form.description) return alert('Student Name and Problem are required');
           addMed({
             student_name: form.student_name,
-            room: `Class: ${form.class_name || 'N/A'} | Reg: ${form.reg || 'N/A'}`,
+            room: `Class: ${form.class_name || 'N/A'} | Reg: ${form.reg || 'N/A'} | Room: ${form.room_number || 'N/A'}`,
+            room_number: form.room_number,
             description: form.description,
             reported_by: user.name,
             status: 'PENDING'
           });
         } else {
           if (!form.issue_type || !form.description) return alert('Issue Type and Description are required');
-          addMaint({
-            type: form.issue_type,
-            location: form.location || 'N/A',
-            description: form.description,
-            reported_by: user.name,
-            status: 'PENDING'
-          });
+          addMaint({ type: form.issue_type, location: form.location || 'N/A', description: form.description, reported_by: user.name, status: 'PENDING' });
         }
         setShow(false);
-        setForm({ student_name: '', class_name: '', reg: '', description: '', issue_type: '', location: '' });
+        setForm({ student_name: '', class_name: '', reg: '', room_number: '', description: '', issue_type: '', location: '' });
       };
 
       const list = type === 'medical' ? medical : maint;
@@ -404,11 +609,7 @@
         <div className="space-y-5 max-w-3xl">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <h2 className="text-2xl font-bold">Report Issues</h2>
-            {isTeacher && (
-              <button onClick={() => setShow(!show)} className="bg-red-500/15 text-red-400 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2">
-                <IconPlus /> New Report
-              </button>
-            )}
+            {isTeacher && <button onClick={() => setShow(!show)} className="bg-red-500/15 text-red-400 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2"><IconPlus /> New Report</button>}
           </div>
 
           <div className="flex bg-[#1c1c1e] p-1 rounded-xl">
@@ -421,15 +622,16 @@
               {type === 'medical' ? (
                 <>
                   <input placeholder="Student Name *" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.student_name} onChange={e => setForm({...form, student_name: e.target.value})} />
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <input placeholder="Class" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.class_name} onChange={e => setForm({...form, class_name: e.target.value})} />
-                    <input placeholder="Registration No" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.reg} onChange={e => setForm({...form, reg: e.target.value})} />
+                    <input placeholder="Registration" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.reg} onChange={e => setForm({...form, reg: e.target.value})} />
+                    <input placeholder="Room No" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.room_number} onChange={e => setForm({...form, room_number: e.target.value})} />
                   </div>
                   <textarea placeholder="What problem does the student have? *" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[100px]" value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
                 </>
               ) : (
                 <>
-                  <input placeholder="Issue Type (e.g. Electrical, Water) *" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.issue_type} onChange={e => setForm({...form, issue_type: e.target.value})} />
+                  <input placeholder="Issue Type *" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.issue_type} onChange={e => setForm({...form, issue_type: e.target.value})} />
                   <input placeholder="Location" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.location} onChange={e => setForm({...form, location: e.target.value})} />
                   <textarea placeholder="Describe the problem *" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[100px]" value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
                 </>
@@ -438,9 +640,7 @@
             </div>
           )}
 
-          {list.length === 0 ? (
-            <p className="text-center text-gray-400 py-12">No issues reported yet</p>
-          ) : (
+          {list.length === 0 ? <p className="text-center text-gray-400 py-12">No issues reported yet</p> : (
             <div className="space-y-3">
               {list.map(item => (
                 <div key={item.id} className={`card p-5 border-l-4 ${item.status === 'RESOLVED' ? 'border-green-500 opacity-70' : 'border-red-500'}`}>
@@ -448,7 +648,7 @@
                     <h4 className="font-bold">{type === 'medical' ? item.student_name : item.type}</h4>
                     <span className={`text-xs px-2 py-1 rounded-full font-medium ${item.status === 'RESOLVED' ? 'bg-green-500/20 text-green-400' : 'bg-orange-500/20 text-orange-400'}`}>{item.status}</span>
                   </div>
-                  <p className="text-xs text-gray-400 mb-2">Location: {item.room || item.location}</p>
+                  <p className="text-xs text-gray-400 mb-2">{item.room || item.location}</p>
                   <p className="text-sm bg-[#252528] p-3 rounded-lg mb-2">{item.description}</p>
                   <p className="text-xs text-gray-500 text-right">Reported by: {item.reported_by}</p>
                   {item.status !== 'RESOLVED' && ((type === 'medical' && canResolveMed) || (type === 'facility' && canResolveMaint)) && (
@@ -464,6 +664,130 @@
       );
     }
 
+    // ==================== CHAT ====================
+    function ChatTab({ user }) {
+      const { data, add, remove } = useCollection('chat_messages');
+      const [message, setMessage] = useState('');
+      const [file, setFile] = useState(null);
+      const bottomRef = useRef();
+
+      useEffect(() => {
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, [data]);
+
+      const send = async () => {
+        if (!message.trim() && !file) return;
+        let file_url = null;
+        if (file) file_url = await uploadFile(file);
+        add({ sender_name: user.name, sender_role: user.role, message: message.trim(), file_url });
+        setMessage('');
+        setFile(null);
+      };
+
+      return (
+        <div className="space-y-4 max-w-3xl">
+          <h2 className="text-2xl font-bold">Staff Chat</h2>
+          <div className="card p-4 chat-box space-y-3">
+            {data.slice().reverse().map(m => (
+              <div key={m.id} className={`flex ${m.sender_name === user.name ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${m.sender_name === user.name ? 'bg-red-500/20' : 'bg-[#252528]'}`}>
+                  <div className="flex justify-between items-center gap-3 mb-1">
+                    <span className="text-xs font-medium text-red-400">{m.sender_name} · {m.sender_role}</span>
+                    {user.role === 'ADMIN' && (
+                      <button onClick={() => { if(confirm('Delete message?')) remove(m.id); }} className="text-red-400 text-xs">Delete</button>
+                    )}
+                  </div>
+                  {m.message && <p className="text-sm">{linkify(m.message)}</p>}
+                  {m.file_url && (
+                    <a href={m.file_url} target="_blank" className="text-blue-400 text-sm flex items-center gap-1 mt-1">
+                      <IconFile /> Attachment
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
+            <div ref={bottomRef}></div>
+          </div>
+
+          <div className="card p-3 flex flex-col gap-2">
+            <div className="flex gap-2">
+              <input value={message} onChange={e => setMessage(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()} placeholder="Type a message..." className="flex-1 p-3 bg-[#2c2c2e] rounded-xl text-white" />
+              <button onClick={send} className="bg-gradient-to-r from-red-500 to-pink-500 px-5 rounded-xl font-semibold">Send</button>
+            </div>
+            {(user.role === 'ADMIN' || user.role === 'TEACHER' || user.role === 'DOCTOR') && (
+              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e => setFile(e.target.files[0])} className="text-sm text-gray-400" />
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ==================== EXAM RESULTS ====================
+    function ResultsTab({ user }) {
+      const { data, add, remove } = useCollection('exam_results');
+      const [show, setShow] = useState(false);
+      const [title, setTitle] = useState('');
+      const [description, setDescription] = useState('');
+      const [file, setFile] = useState(null);
+
+      const canUpload = user.role === 'ADMIN' || user.role === 'TEACHER';
+
+      const save = async () => {
+        if (!title) return alert('Title is required');
+        let file_url = null;
+        if (file) file_url = await uploadFile(file);
+        add({ title, description, file_url, uploaded_by: user.name });
+        setShow(false); setTitle(''); setDescription(''); setFile(null);
+      };
+
+      return (
+        <div className="space-y-5 max-w-3xl">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold">Exam & Class Test Results</h2>
+            {canUpload && (
+              <button onClick={() => setShow(!show)} className="bg-red-500/15 text-red-400 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2">
+                <IconPlus /> Upload Result
+              </button>
+            )}
+          </div>
+
+          {show && canUpload && (
+            <div className="card p-5 space-y-3">
+              <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title (e.g. Class 10 Midterm)" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" />
+              <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description (optional)" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[80px]" />
+              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e => setFile(e.target.files[0])} className="w-full text-sm text-gray-400" />
+              <button onClick={save} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">Upload</button>
+            </div>
+          )}
+
+          {data.length === 0 ? <p className="text-center text-gray-400 py-12">No results uploaded yet</p> : (
+            <div className="space-y-3">
+              {data.map(r => (
+                <div key={r.id} className="card p-5 border-l-4 border-blue-500">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-bold text-lg">{r.title}</h3>
+                      <p className="text-xs text-gray-400 mb-2">By {r.uploaded_by}</p>
+                    </div>
+                    {(user.role === 'ADMIN' || r.uploaded_by === user.name) && (
+                      <button onClick={() => { if(confirm('Delete?')) remove(r.id); }} className="text-red-400 p-1"><IconTrash /></button>
+                    )}
+                  </div>
+                  {r.description && <p className="text-sm mb-2">{linkify(r.description)}</p>}
+                  {r.file_url && (
+                    <a href={r.file_url} target="_blank" className="text-blue-400 text-sm flex items-center gap-1">
+                      <IconFile /> View / Download File
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==================== PROFILE ====================
     function Profile({ user, setUser, setTab }) {
       const [showEdit, setShowEdit] = useState(false);
       const [newLoginId, setNewLoginId] = useState(user.id);
@@ -472,43 +796,23 @@
 
       const saveChanges = async () => {
         if (!newLoginId.trim()) return alert('Login ID cannot be empty');
-        
         const updates = {};
-        if (newLoginId.trim() !== user.id) {
-          updates.username = newLoginId.trim();
-        }
+        if (newLoginId.trim() !== user.id) updates.username = newLoginId.trim();
         if (newPass) {
           if (newPass.length < 4) return alert('Password must be at least 4 characters');
           if (newPass !== confirmPass) return alert('Passwords do not match');
           updates.password = newPass.trim();
         }
+        if (Object.keys(updates).length === 0) { setShowEdit(false); return; }
 
-        if (Object.keys(updates).length === 0) {
-          setShowEdit(false);
-          return;
-        }
-
-        const { error } = await supabase
-          .from('users')
-          .update(updates)
-          .eq('username', user.id);
-
+        const { error } = await supabase.from('users').update(updates).eq('username', user.id);
         if (error) {
-          if (error.message.includes('duplicate') || error.message.includes('unique')) {
-            alert('This Login ID is already taken');
-          } else {
-            alert(error.message);
-          }
+          if (error.message.includes('duplicate') || error.message.includes('unique')) alert('This Login ID is already taken');
+          else alert(error.message);
         } else {
           alert('Profile updated successfully!');
-          // Update local user state
-          setUser({
-            ...user,
-            id: updates.username || user.id
-          });
-          setShowEdit(false);
-          setNewPass('');
-          setConfirmPass('');
+          setUser({ ...user, id: updates.username || user.id });
+          setShowEdit(false); setNewPass(''); setConfirmPass('');
         }
       };
 
@@ -516,53 +820,22 @@
         <div className="space-y-5 max-w-lg">
           <h2 className="text-2xl font-bold">My Profile</h2>
           <div className="card p-6 space-y-5">
-            <div>
-              <p className="text-xs text-gray-400 mb-1">Full Name</p>
-              <p className="font-medium text-lg">{user.name}</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-400 mb-1">Role</p>
-              <p className="font-medium">{user.role}</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-400 mb-1">Login ID</p>
-              <p className="font-medium text-red-400 text-lg">{user.id}</p>
-            </div>
+            <div><p className="text-xs text-gray-400 mb-1">Full Name</p><p className="font-medium text-lg">{user.name}</p></div>
+            <div><p className="text-xs text-gray-400 mb-1">Role</p><p className="font-medium">{user.role}</p></div>
+            <div><p className="text-xs text-gray-400 mb-1">Login ID</p><p className="font-medium text-red-400 text-lg">{user.id}</p></div>
 
             <div className="pt-4 border-t border-[#2c2c2e] space-y-3">
               {!showEdit ? (
-                <button onClick={() => setShowEdit(true)} className="w-full bg-[#2c2c2e] hover:bg-[#3a3a3c] text-white py-3 rounded-xl text-sm font-medium">
-                  Change Login ID / Password
-                </button>
+                <button onClick={() => setShowEdit(true)} className="w-full bg-[#2c2c2e] hover:bg-[#3a3a3c] text-white py-3 rounded-xl text-sm font-medium">Change Login ID / Password</button>
               ) : (
                 <div className="space-y-3">
-                  <div>
-                    <label className="text-xs text-gray-400 mb-1 block">New Login ID</label>
-                    <input 
-                      value={newLoginId} 
-                      onChange={e => setNewLoginId(e.target.value)} 
-                      className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" 
-                    />
+                  <div><label className="text-xs text-gray-400 mb-1 block">New Login ID</label>
+                    <input value={newLoginId} onChange={e => setNewLoginId(e.target.value)} className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" />
                   </div>
-                  <div>
-                    <label className="text-xs text-gray-400 mb-1 block">New Password (leave empty to keep current)</label>
-                    <input 
-                      type="password" 
-                      placeholder="New Password" 
-                      className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" 
-                      value={newPass} 
-                      onChange={e => setNewPass(e.target.value)} 
-                    />
+                  <div><label className="text-xs text-gray-400 mb-1 block">New Password (leave empty to keep current)</label>
+                    <input type="password" placeholder="New Password" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={newPass} onChange={e => setNewPass(e.target.value)} />
                   </div>
-                  {newPass && (
-                    <input 
-                      type="password" 
-                      placeholder="Confirm New Password" 
-                      className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" 
-                      value={confirmPass} 
-                      onChange={e => setConfirmPass(e.target.value)} 
-                    />
-                  )}
+                  {newPass && <input type="password" placeholder="Confirm New Password" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} />}
                   <div className="flex gap-3">
                     <button onClick={saveChanges} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-xl font-semibold">Save Changes</button>
                     <button onClick={() => { setShowEdit(false); setNewLoginId(user.id); setNewPass(''); setConfirmPass(''); }} className="px-5 bg-[#2c2c2e] text-gray-300 rounded-xl">Cancel</button>
@@ -570,12 +843,8 @@
                 </div>
               )}
 
-              {/* Manage Users button for Admin on Mobile */}
               {user.role === 'ADMIN' && (
-                <button 
-                  onClick={() => setTab('users')} 
-                  className="w-full bg-red-500/15 text-red-400 py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2 mt-2"
-                >
+                <button onClick={() => setTab('users')} className="w-full bg-red-500/15 text-red-400 py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2 mt-2">
                   <IconUsers /> Manage Users
                 </button>
               )}
@@ -585,169 +854,7 @@
       );
     }
 
-    function Notices({ user }) {
-      const { data, add, update, remove } = useCollection('notices');
-      const [show, setShow] = useState(false);
-      const [editId, setEditId] = useState(null);
-      const [title, setTitle] = useState('');
-      const [content, setContent] = useState('');
-
-      const startEdit = (n) => {
-        setEditId(n.id);
-        setTitle(n.title);
-        setContent(n.content);
-        setShow(true);
-      };
-
-      const save = () => {
-        if (!title || !content) return alert('Please fill title and content');
-        if (editId) {
-          update(editId, { title, content });
-        } else {
-          add({ title, content, type: 'text', author: user.name });
-        }
-        setShow(false);
-        setEditId(null);
-        setTitle('');
-        setContent('');
-      };
-
-      return (
-        <div className="space-y-5 max-w-3xl">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">Notices</h2>
-            {user.role === 'ADMIN' && (
-              <button onClick={() => { setShow(!show); setEditId(null); setTitle(''); setContent(''); }} className="text-red-500 bg-red-500/10 p-2 rounded-full"><IconPlus /></button>
-            )}
-          </div>
-          {show && user.role === 'ADMIN' && (
-            <div className="card p-5 space-y-3">
-              <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" />
-              <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Write notice..." className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[100px]" />
-              <div className="flex gap-3">
-                <button onClick={save} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">{editId ? 'Update Notice' : 'Publish'}</button>
-                {editId && <button onClick={() => { setShow(false); setEditId(null); }} className="px-5 bg-[#2c2c2e] rounded-xl">Cancel</button>}
-              </div>
-            </div>
-          )}
-          {data.length === 0 && <p className="text-center text-gray-400 py-12">No notices yet</p>}
-          <div className="space-y-3">
-            {data.map(n => (
-              <div key={n.id} className="card p-5 border-l-4 border-red-500">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-bold text-lg">{n.title}</h3>
-                    <p className="text-xs text-gray-400 mb-3">By {n.author}</p>
-                  </div>
-                  {user.role === 'ADMIN' && (
-                    <div className="flex gap-2">
-                      <button onClick={() => startEdit(n)} className="text-blue-400 p-1"><IconEdit /></button>
-                      <button onClick={() => { if(confirm('Delete this notice?')) remove(n.id); }} className="text-red-400 p-1"><IconTrash /></button>
-                    </div>
-                  )}
-                </div>
-                <p className="text-sm whitespace-pre-wrap leading-relaxed">{n.content}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    function ScheduleTab({ user }) {
-      const { data, add, update, remove } = useCollection('proxies');
-      const today = new Date().toISOString().split('T')[0];
-      const todayProxies = data.filter(p => p.date === today);
-
-      const [show, setShow] = useState(false);
-      const [editId, setEditId] = useState(null);
-      const [form, setForm] = useState({ date: today, absent_teacher: '', proxy_teacher: '', class_room: '', subject: '' });
-
-      const startEdit = (p) => {
-        setEditId(p.id);
-        setForm({ date: p.date, absent_teacher: p.absent_teacher, proxy_teacher: p.proxy_teacher, class_room: p.class_room, subject: p.subject });
-        setShow(true);
-      };
-
-      const save = () => {
-        if (!form.date || !form.proxy_teacher) return alert('Date and Proxy Teacher are required');
-        if (editId) {
-          update(editId, form);
-        } else {
-          add(form);
-        }
-        setShow(false);
-        setEditId(null);
-        setForm({ date: today, absent_teacher: '', proxy_teacher: '', class_room: '', subject: '' });
-      };
-
-      return (
-        <div className="space-y-5 max-w-3xl">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h2 className="text-2xl font-bold">Proxy Schedule</h2>
-              <p className="text-sm text-gray-400">Today's substitution only</p>
-            </div>
-            {user.role === 'ADMIN' && (
-              <button onClick={() => { setShow(!show); setEditId(null); setForm({ date: today, absent_teacher: '', proxy_teacher: '', class_room: '', subject: '' }); }} className="bg-red-500/15 text-red-400 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2">
-                <IconPlus /> Add Proxy
-              </button>
-            )}
-          </div>
-
-          {show && user.role === 'ADMIN' && (
-            <div className="card p-5 grid gap-3">
-              <input type="date" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.date} onChange={e => setForm({...form, date: e.target.value})} />
-              <input placeholder="Absent Teacher" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.absent_teacher} onChange={e => setForm({...form, absent_teacher: e.target.value})} />
-              <input placeholder="Proxy Teacher" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.proxy_teacher} onChange={e => setForm({...form, proxy_teacher: e.target.value})} />
-              <div className="grid grid-cols-2 gap-3">
-                <input placeholder="Class" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.class_room} onChange={e => setForm({...form, class_room: e.target.value})} />
-                <input placeholder="Subject" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.subject} onChange={e => setForm({...form, subject: e.target.value})} />
-              </div>
-              <div className="flex gap-3">
-                <button onClick={save} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">{editId ? 'Update Proxy' : 'Assign Proxy'}</button>
-                {editId && <button onClick={() => setShow(false)} className="px-5 bg-[#2c2c2e] rounded-xl">Cancel</button>}
-              </div>
-            </div>
-          )}
-
-          {todayProxies.length === 0 ? (
-            <p className="text-center text-gray-400 py-12">No proxy classes for today</p>
-          ) : (
-            <div className="space-y-3">
-              {todayProxies.map(p => (
-                <div key={p.id} className="card p-5 border-l-4 border-red-500">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex gap-2 text-xs">
-                      <span className="bg-red-500/20 text-red-400 px-3 py-1 rounded-full">{p.date}</span>
-                      <span className="bg-[#2c2c2e] px-3 py-1 rounded-full">{p.class_room}</span>
-                    </div>
-                    {user.role === 'ADMIN' && (
-                      <div className="flex gap-2">
-                        <button onClick={() => startEdit(p)} className="text-blue-400 p-1"><IconEdit /></button>
-                        <button onClick={() => { if(confirm('Delete this proxy?')) remove(p.id); }} className="text-red-400 p-1"><IconTrash /></button>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex gap-6 text-sm mb-3">
-                    <div className="flex-1">
-                      <p className="text-gray-400 text-xs mb-1">Substitute</p>
-                      <p className="font-semibold">{p.proxy_teacher}</p>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-gray-400 text-xs mb-1">Replacing</p>
-                      <p className="line-through text-gray-400">{p.absent_teacher}</p>
-                    </div>
-                  </div>
-                  <p className="text-sm border-t border-[#2c2c2e] pt-3">Subject: {p.subject}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      );
-    }
-
+    // ==================== USERS ====================
     function Users() {
       const { data, add, remove } = useCollection('users');
       const [show, setShow] = useState(false);
@@ -764,9 +871,8 @@
 
           {show && (
             <div className="card p-5 grid gap-3">
-              <p className="text-sm text-gray-400 mb-1">Admin creates Login ID + Temporary Password. User can change password later from Profile.</p>
               <input placeholder="Full Name" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} />
-              <input placeholder="Login ID (e.g. t001)" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.username} onChange={e => setForm({...form, username: e.target.value})} />
+              <input placeholder="Login ID" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.username} onChange={e => setForm({...form, username: e.target.value})} />
               <input placeholder="Temporary Password" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
               <select className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
                 <option value="TEACHER">Teacher</option>
@@ -776,16 +882,10 @@
               </select>
               <button onClick={() => { 
                 if(form.username && form.password && form.full_name){ 
-                  add(form); 
-                  setShow(false); 
-                  setForm({username:'',password:'',full_name:'',role:'TEACHER'}); 
+                  add(form); setShow(false); setForm({username:'',password:'',full_name:'',role:'TEACHER'}); 
                   alert('Login ID created successfully!');
-                } else {
-                  alert('Please fill all fields');
-                }
-              }} className="bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">
-                Create Login ID
-              </button>
+                } else alert('Please fill all fields');
+              }} className="bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">Create Login ID</button>
             </div>
           )}
 
@@ -796,10 +896,7 @@
                   <p className="font-medium">{u.full_name}</p>
                   <p className="text-xs text-gray-400 mt-1">{u.role}</p>
                 </div>
-                <button 
-                  onClick={() => { if(confirm(`Delete ${u.full_name}? This user will not be able to login.`)) remove(u.id); }} 
-                  className="text-red-400 p-2 hover:bg-red-500/10 rounded-lg"
-                >
+                <button onClick={() => { if(confirm(`Delete ${u.full_name}?`)) remove(u.id); }} className="text-red-400 p-2 hover:bg-red-500/10 rounded-lg">
                   <IconTrash />
                 </button>
               </div>
