@@ -71,7 +71,6 @@
     function App() {
       const [user, setUser] = useState(null);
       const [tab, setTab] = useState('home');
-      const [showReg, setShowReg] = useState(false);
 
       const login = async (username, password) => {
         const cleanUser = username.trim();
@@ -88,13 +87,142 @@
         if (error) return alert('Database error: ' + error.message);
         if (!data) return alert('Invalid Login ID or Password');
 
-        setUser({ id: data.username, name: data.full_name, role: data.role });
+        setUser({ id: data.username, name: data.full_name, role: data.role, dbId: data.id });
       };
 
       if (!user) {
-        return showReg
-          ? <Register onBack={() => setShowReg(false)} onSuccess={() => setShowReg(false)} />
-          : <Login onLogin={login} onRegister={() => setShowReg(true)} />;
+        return <Login onLogin={login} />;
+      }
+
+      return (
+        <div className="min-h-screen bg-[#0b0b0e] flex flex-col md:flex-row">
+          <aside className="hidden md:flex md:flex-col md:w-64 bg-[#141416] border-r border-[#2c2c2e] p-4 sticky top-0 h-screen">
+            <div className="mb-8">
+              <h1 className="text-lg font-bold leading-tight">Bes An Noor Model School</h1>
+              <p className="text-xs text-gray-400">(Boys' Unit)</p>
+            </div>
+            <nav className="flex-1 space-y-2">
+              <SideBtn active={tab==='home'} onClick={() => setTab('home')} icon={<IconHome />} label="Home" />
+              <SideBtn active={tab==='notices'} onClick={() => setTab('notices')} icon={<IconClipboard />} label="Notices" />
+              <SideBtn active={tab==='schedule'} onClick={() => setTab('schedule')} icon={<IconCalendar />} label="Proxy" />
+              <SideBtn active={tab==='report'} onClick={() => setTab('report')} icon={<IconAlert />} label="Report Issue" />
+              <SideBtn active={tab==='profile'} onClick={() => setTab('profile')} icon={<IconUser />} label="Profile" />
+              {user.role === 'ADMIN' && <SideBtn active={tab==='users'} onClick={() => setTab('users')} icon={<IconUsers />} label="Manage Users" />}
+            </nav>
+            <button onClick={() => { setUser(null); setTab('home'); }} className="mt-4 flex items-center gap-2 text-gray-400 hover:text-white text-sm">
+              <IconLogOut /> Logout
+            </button>
+          </aside>
+
+          <div className="flex-1 flex flex-col min-h-screen">
+            <header className="header px-4 py-4 flex justify-between items-center sticky top-0 z-20 md:hidden">
+              <div>
+                <h1 className="text-base font-bold">Bes An Noor Model School</h1>
+                <p className="text-xs text-gray-400">(Boys' Unit) · {user.name}</p>
+              </div>
+              <button onClick={() => { setUser(null); setTab('home'); }} className="p-2 rounded-full bg-[#2c2c2e] text-gray-400">
+                <IconLogOut />
+              </button>
+            </header>
+
+            <header className="hidden md:flex headerHere is the **complete final code**.  
+Copy everything from `<!DOCTYPE html>` to the last `</html>` and paste it into your `index.html`.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bes An Noor Model School (Boys' Unit)</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body { background: #0b0b0e; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; color: #fff; }
+    .card { background: #1c1c1e; border-radius: 16px; }
+    .header { background: rgba(11,11,14,0.95); border-bottom: 1px solid #2c2c2e; }
+    .bottom-nav { background: rgba(20,20,23,0.95); border-top: 1px solid #2c2c2e; }
+    .icon { display: inline-flex; align-items: center; justify-content: center; }
+    .icon svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useCallback } = React;
+
+    const SUPABASE_URL = 'https://peiybuhnozgqatdyrdhf.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlaXlidWhub3pncWF0ZHlyZGhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzIyNDEsImV4cCI6MjEwMjU0ODI0MX0.a_1otAvBMRa20HSA01jcvtCbxwUpXNbmCzVmA9Qm-DE';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const IconHome = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg></span>;
+    const IconClipboard = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/><path d="M9 13l2 2 4-4"/></svg></span>;
+    const IconCalendar = () => <span className="icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>;
+    const IconUser = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>;
+    const IconUsers = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span>;
+    const IconLogOut = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>;
+    const IconPlus = () => <span className="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span>;
+    const IconCheck = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>;
+    const IconAlert = () => <span className="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span>;
+
+    function useCollection(table) {
+      const [data, setData] = useState([]);
+      const load = useCallback(async () => {
+        const { data: rows } = await supabase.from(table).select('*').order('created_at', { ascending: false });
+        setData(rows || []);
+      }, [table]);
+
+      useEffect(() => {
+        load();
+        const ch = supabase.channel(table).on('postgres_changes', { event: '*', schema: 'public', table }, load).subscribe();
+        return () => supabase.removeChannel(ch);
+      }, [table, load]);
+
+      const add = async (row) => {
+        const { error } = await supabase.from(table).insert([row]);
+        if (error) alert(error.message);
+        else load();
+      };
+
+      const update = async (id, changes) => {
+        const { error } = await supabase.from(table).update(changes).eq('id', id);
+        if (error) alert(error.message);
+        else load();
+      };
+
+      return { data, add, update };
+    }
+
+    function App() {
+      const [user, setUser] = useState(null);
+      const [tab, setTab] = useState('home');
+
+      const login = async (username, password) => {
+        const cleanUser = username.trim();
+        const cleanPass = password.trim();
+        if (!cleanUser || !cleanPass) return alert('Please enter Login ID and Password');
+
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('username', cleanUser)
+          .eq('password', cleanPass)
+          .maybeSingle();
+
+        if (error) return alert('Database error: ' + error.message);
+        if (!data) return alert('Invalid Login ID or Password');
+
+        setUser({ id: data.username, name: data.full_name, role: data.role, dbId: data.id });
+      };
+
+      if (!user) {
+        return <Login onLogin={login} />;
       }
 
       return (
@@ -170,20 +298,14 @@
       );
     }
 
-    function Login({ onLogin, onRegister }) {
+    function Login({ onLogin }) {
       const [id, setId] = useState('');
       const [pass, setPass] = useState('');
       return (
         <div className="min-h-screen flex items-center justify-center p-4">
           <div className="w-full max-w-sm">
             <div className="text-center mb-8">
-              {/* School Logo */}
-              <img 
-                src="logo.png" 
-                alt="Bes An Noor Model School" 
-                className="w-32 h-32 mx-auto mb-5 object-contain"
-                onError={(e) => { e.target.style.display = 'none'; }}
-              />
+              <img src="logo.png" alt="Logo" className="w-32 h-32 mx-auto mb-5 object-contain" onError={(e)=>{e.target.style.display='none'}} />
               <h1 className="text-2xl font-bold">Bes An Noor Model School</h1>
               <p className="text-gray-400 mt-1">(Boys' Unit)</p>
             </div>
@@ -192,43 +314,6 @@
               <input type="password" value={pass} onChange={e => setPass(e.target.value)} placeholder="Password" className="w-full p-3 bg-[#2c2c2e] rounded-xl border border-[#3a3a3c] text-white" />
               <button onClick={() => onLogin(id, pass)} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">Continue</button>
             </div>
-            <button onClick={onRegister} className="w-full text-center text-red-400 text-sm mt-6">Create Teacher / Staff Account</button>
-          </div>
-        </div>
-      );
-    }
-
-    function Register({ onBack, onSuccess }) {
-      const [form, setForm] = useState({ username: '', password: '', full_name: '', role: 'TEACHER' });
-      const submit = async () => {
-        if (!form.username || !form.password || !form.full_name) return alert('Please fill all fields');
-        const { error } = await supabase.from('users').insert([{
-          username: form.username.trim(),
-          password: form.password.trim(),
-          full_name: form.full_name.trim(),
-          role: form.role
-        }]);
-        if (error) alert(error.message.includes('duplicate') ? 'Login ID already exists' : error.message);
-        else {
-          alert(`Account created!\n\nLogin ID: ${form.username.trim()}\nPassword: ${form.password.trim()}`);
-          onSuccess();
-        }
-      };
-      return (
-        <div className="min-h-screen flex items-center justify-center p-4">
-          <div className="w-full max-w-sm card p-6 space-y-3">
-            <h2 className="text-xl font-bold mb-2">Create Account</h2>
-            <input placeholder="Full Name" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} />
-            <input placeholder="Login ID" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.username} onChange={e => setForm({...form, username: e.target.value})} />
-            <input type="password" placeholder="Password" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
-            <select className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
-              <option value="TEACHER">Teacher</option>
-              <option value="ADMIN">Admin</option>
-              <option value="DOCTOR">Doctor</option>
-              <option value="MAINTENANCE">Maintenance</option>
-            </select>
-            <button onClick={submit} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">Create Account</button>
-            <button onClick={onBack} className="w-full text-gray-400 text-sm">Back to Login</button>
           </div>
         </div>
       );
@@ -242,32 +327,14 @@
 
       const [showAbsentForm, setShowAbsentForm] = useState(false);
       const [absentData, setAbsentData] = useState({
-        reason: '',
-        from_date: today,
-        to_date: '',
-        leave_time: 'Morning',
-        return_date: '',
-        return_time: ''
+        reason: '', from_date: today, to_date: '', leave_time: 'Morning', return_date: '', return_time: ''
       });
 
       const markPresent = async () => {
         if (mine) {
-          await update(mine.id, { 
-            status: 'PRESENT', 
-            reason: null, 
-            from_date: null, 
-            to_date: null, 
-            leave_time: null, 
-            return_date: null, 
-            return_time: null 
-          });
+          await update(mine.id, { status: 'PRESENT', reason: null, from_date: null, to_date: null, leave_time: null, return_date: null, return_time: null });
         } else {
-          add({
-            date: today,
-            teacher_id: user.id,
-            name: user.name,
-            status: 'PRESENT'
-          });
+          add({ date: today, teacher_id: user.id, name: user.name, status: 'PRESENT' });
         }
         setShowAbsentForm(false);
       };
@@ -276,26 +343,13 @@
         if (!absentData.reason || !absentData.to_date || !absentData.return_date) {
           return alert('Please fill Reason, To Date and Return Date');
         }
-
         const payload = {
-          date: today,
-          teacher_id: user.id,
-          name: user.name,
-          status: 'ABSENT',
-          reason: absentData.reason,
-          from_date: absentData.from_date,
-          to_date: absentData.to_date,
-          leave_time: absentData.leave_time,
-          return_date: absentData.return_date,
-          return_time: absentData.return_time
+          date: today, teacher_id: user.id, name: user.name, status: 'ABSENT',
+          reason: absentData.reason, from_date: absentData.from_date, to_date: absentData.to_date,
+          leave_time: absentData.leave_time, return_date: absentData.return_date, return_time: absentData.return_time
         };
-
-        if (mine) {
-          await update(mine.id, payload);
-        } else {
-          add(payload);
-        }
-
+        if (mine) await update(mine.id, payload);
+        else add(payload);
         setShowAbsentForm(false);
         setAbsentData({ reason: '', from_date: today, to_date: '', leave_time: 'Morning', return_date: '', return_time: '' });
       };
@@ -312,7 +366,6 @@
             </div>
           </div>
 
-          {/* Attendance */}
           <div className="card p-5">
             <h3 className="font-bold text-lg mb-1">Daily Attendance</h3>
             <p className="text-sm text-gray-400 mb-4">{new Date().toDateString()}</p>
@@ -335,21 +388,12 @@
 
             {!showAbsentForm ? (
               <div className="flex gap-3">
-                <button onClick={markPresent} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-full text-sm font-semibold">
-                  Present
-                </button>
-                <button onClick={() => setShowAbsentForm(true)} className="flex-1 bg-[#2c2c2e] text-orange-400 border border-orange-500/40 py-3 rounded-full text-sm font-semibold">
-                  Absent
-                </button>
+                <button onClick={markPresent} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-full text-sm font-semibold">Present</button>
+                <button onClick={() => setShowAbsentForm(true)} className="flex-1 bg-[#2c2c2e] text-orange-400 border border-orange-500/40 py-3 rounded-full text-sm font-semibold">Absent</button>
               </div>
             ) : (
               <div className="space-y-3">
-                <textarea 
-                  placeholder="Reason for absence *" 
-                  className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[80px]"
-                  value={absentData.reason}
-                  onChange={e => setAbsentData({...absentData, reason: e.target.value})}
-                />
+                <textarea placeholder="Reason for absence *" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[80px]" value={absentData.reason} onChange={e => setAbsentData({...absentData, reason: e.target.value})} />
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs text-gray-400 mb-1 block">From Date</label>
@@ -379,12 +423,8 @@
                   </div>
                 </div>
                 <div className="flex gap-3 pt-2">
-                  <button onClick={submitAbsent} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-xl font-semibold">
-                    Submit Absent
-                  </button>
-                  <button onClick={() => setShowAbsentForm(false)} className="px-5 bg-[#2c2c2e] text-gray-300 rounded-xl">
-                    Cancel
-                  </button>
+                  <button onClick={submitAbsent} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-xl font-semibold">Submit Absent</button>
+                  <button onClick={() => setShowAbsentForm(false)} className="px-5 bg-[#2c2c2e] text-gray-300 rounded-xl">Cancel</button>
                 </div>
               </div>
             )}
@@ -401,9 +441,7 @@
                     <div key={a.id} className="bg-[#252528] rounded-xl p-4">
                       <div className="flex justify-between items-center">
                         <span className="font-medium">{a.name}</span>
-                        <span className={`text-sm font-medium ${a.status === 'PRESENT' ? 'text-green-400' : 'text-orange-400'}`}>
-                          {a.status}
-                        </span>
+                        <span className={`text-sm font-medium ${a.status === 'PRESENT' ? 'text-green-400' : 'text-orange-400'}`}>{a.status}</span>
                       </div>
                       {a.status === 'ABSENT' && (
                         <div className="mt-3 text-xs text-gray-400 space-y-1 border-t border-gray-700 pt-3">
@@ -544,6 +582,28 @@
     }
 
     function Profile({ user }) {
+      const [showChange, setShowChange] = useState(false);
+      const [newPass, setNewPass] = useState('');
+      const [confirmPass, setConfirmPass] = useState('');
+
+      const changePassword = async () => {
+        if (!newPass || newPass.length < 4) return alert('Password must be at least 4 characters');
+        if (newPass !== confirmPass) return alert('Passwords do not match');
+
+        const { error } = await supabase
+          .from('users')
+          .update({ password: newPass.trim() })
+          .eq('username', user.id);
+
+        if (error) alert(error.message);
+        else {
+          alert('Password changed successfully!');
+          setShowChange(false);
+          setNewPass('');
+          setConfirmPass('');
+        }
+      };
+
       return (
         <div className="space-y-5 max-w-lg">
           <h2 className="text-2xl font-bold">My Profile</h2>
@@ -559,6 +619,23 @@
             <div>
               <p className="text-xs text-gray-400 mb-1">Login ID</p>
               <p className="font-medium text-red-400 text-lg">{user.id}</p>
+            </div>
+
+            <div className="pt-4 border-t border-[#2c2c2e]">
+              {!showChange ? (
+                <button onClick={() => setShowChange(true)} className="w-full bg-[#2c2c2e] hover:bg-[#3a3a3c] text-white py-3 rounded-xl text-sm font-medium">
+                  Change Password
+                </button>
+              ) : (
+                <div className="space-y-3">
+                  <input type="password" placeholder="New Password" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={newPass} onChange={e => setNewPass(e.target.value)} />
+                  <input type="password" placeholder="Confirm New Password" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} />
+                  <div className="flex gap-3">
+                    <button onClick={changePassword} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-xl font-semibold">Save Password</button>
+                    <button onClick={() => setShowChange(false)} className="px-5 bg-[#2c2c2e] text-gray-300 rounded-xl">Cancel</button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -669,23 +746,37 @@
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold">Manage Users</h2>
             <button onClick={() => setShow(!show)} className="bg-red-500/15 text-red-400 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2">
-              <IconPlus /> Add User
+              <IconPlus /> Create Login ID
             </button>
           </div>
+
           {show && (
             <div className="card p-5 grid gap-3">
+              <p className="text-sm text-gray-400 mb-1">Admin creates Login ID + Temporary Password. User can change password later from Profile.</p>
               <input placeholder="Full Name" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} />
-              <input placeholder="Login ID" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.username} onChange={e => setForm({...form, username: e.target.value})} />
-              <input placeholder="Password" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
+              <input placeholder="Login ID (e.g. t001)" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.username} onChange={e => setForm({...form, username: e.target.value})} />
+              <input placeholder="Temporary Password" className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
               <select className="p-3 bg-[#2c2c2e] rounded-xl text-white" value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
                 <option value="TEACHER">Teacher</option>
-                <option value="ADMIN">Admin</option>
                 <option value="DOCTOR">Doctor</option>
                 <option value="MAINTENANCE">Maintenance</option>
+                <option value="ADMIN">Admin</option>
               </select>
-              <button onClick={() => { if(form.username && form.password && form.full_name){ add(form); setShow(false); setForm({username:'',password:'',full_name:'',role:'TEACHER'}); }}} className="bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">Create User</button>
+              <button onClick={() => { 
+                if(form.username && form.password && form.full_name){ 
+                  add(form); 
+                  setShow(false); 
+                  setForm({username:'',password:'',full_name:'',role:'TEACHER'}); 
+                  alert('Login ID created successfully!\n\nGive this Login ID and Temporary Password to the person.');
+                } else {
+                  alert('Please fill all fields');
+                }
+              }} className="bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">
+                Create Login ID
+              </button>
             </div>
           )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {data.map(u => (
               <div key={u.id} className="card p-4">
