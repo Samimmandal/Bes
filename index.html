@@ -95,7 +95,7 @@
         if (error) return alert('Database error: ' + error.message);
         if (!data) return alert('Invalid Login ID or Password');
 
-        setUser({ id: data.username, name: data.full_name, role: data.role });
+        setUser({ id: data.username, name: data.full_name, role: data.role, dbId: data.id });
       };
 
       if (!user) {
@@ -123,16 +123,18 @@
           </aside>
 
           <div className="flex-1 flex flex-col min-h-screen">
+            {/* Mobile Header */}
             <header className="header px-4 py-4 flex justify-between items-center sticky top-0 z-20 md:hidden">
               <div>
                 <h1 className="text-base font-bold">Bes An Noor Model School</h1>
                 <p className="text-xs text-gray-400">(Boys' Unit) · {user.name}</p>
               </div>
-              <button onClick={() => { setUser(null); setTab('home'); }} className="p-2 rounded-full bg-[#2c2c2e] text-gray-400">
+              <button onClick={() => { setUser(null); setTab('home'); }} className="w-10 h-10 rounded-full bg-[#2c2c2e] flex items-center justify-center text-gray-300 hover:text-white">
                 <IconLogOut />
               </button>
             </header>
 
+            {/* Desktop Header */}
             <header className="hidden md:flex header px-6 py-4 justify-between items-center sticky top-0 z-20">
               <h2 className="text-lg font-semibold capitalize">{tab === 'schedule' ? 'Proxy Schedule' : tab}</h2>
               <div className="text-sm text-gray-400">{user.name} · {user.role}</div>
@@ -143,10 +145,11 @@
               {tab === 'notices' && <Notices user={user} />}
               {tab === 'schedule' && <ScheduleTab user={user} />}
               {tab === 'report' && <ReportTab user={user} />}
-              {tab === 'profile' && <Profile user={user} />}
+              {tab === 'profile' && <Profile user={user} setUser={setUser} setTab={setTab} />}
               {tab === 'users' && user.role === 'ADMIN' && <Users />}
             </main>
 
+            {/* Mobile Bottom Nav */}
             <nav className="bottom-nav fixed bottom-0 left-0 right-0 flex justify-around py-3 z-20 md:hidden">
               <NavBtn active={tab==='home'} onClick={() => setTab('home')} icon={<IconHome />} label="Home" />
               <NavBtn active={tab==='notices'} onClick={() => setTab('notices')} icon={<IconClipboard />} label="Notices" />
@@ -458,24 +461,49 @@
       );
     }
 
-    function Profile({ user }) {
-      const [showChange, setShowChange] = useState(false);
+    function Profile({ user, setUser, setTab }) {
+      const [showEdit, setShowEdit] = useState(false);
+      const [newLoginId, setNewLoginId] = useState(user.id);
       const [newPass, setNewPass] = useState('');
       const [confirmPass, setConfirmPass] = useState('');
 
-      const changePassword = async () => {
-        if (!newPass || newPass.length < 4) return alert('Password must be at least 4 characters');
-        if (newPass !== confirmPass) return alert('Passwords do not match');
+      const saveChanges = async () => {
+        if (!newLoginId.trim()) return alert('Login ID cannot be empty');
+        
+        const updates = {};
+        if (newLoginId.trim() !== user.id) {
+          updates.username = newLoginId.trim();
+        }
+        if (newPass) {
+          if (newPass.length < 4) return alert('Password must be at least 4 characters');
+          if (newPass !== confirmPass) return alert('Passwords do not match');
+          updates.password = newPass.trim();
+        }
+
+        if (Object.keys(updates).length === 0) {
+          setShowEdit(false);
+          return;
+        }
 
         const { error } = await supabase
           .from('users')
-          .update({ password: newPass.trim() })
+          .update(updates)
           .eq('username', user.id);
 
-        if (error) alert(error.message);
-        else {
-          alert('Password changed successfully!');
-          setShowChange(false);
+        if (error) {
+          if (error.message.includes('duplicate') || error.message.includes('unique')) {
+            alert('This Login ID is already taken');
+          } else {
+            alert(error.message);
+          }
+        } else {
+          alert('Profile updated successfully!');
+          // Update local user state
+          setUser({
+            ...user,
+            id: updates.username || user.id
+          });
+          setShowEdit(false);
           setNewPass('');
           setConfirmPass('');
         }
@@ -498,20 +526,55 @@
               <p className="font-medium text-red-400 text-lg">{user.id}</p>
             </div>
 
-            <div className="pt-4 border-t border-[#2c2c2e]">
-              {!showChange ? (
-                <button onClick={() => setShowChange(true)} className="w-full bg-[#2c2c2e] hover:bg-[#3a3a3c] text-white py-3 rounded-xl text-sm font-medium">
-                  Change Password
+            <div className="pt-4 border-t border-[#2c2c2e] space-y-3">
+              {!showEdit ? (
+                <button onClick={() => setShowEdit(true)} className="w-full bg-[#2c2c2e] hover:bg-[#3a3a3c] text-white py-3 rounded-xl text-sm font-medium">
+                  Change Login ID / Password
                 </button>
               ) : (
                 <div className="space-y-3">
-                  <input type="password" placeholder="New Password" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={newPass} onChange={e => setNewPass(e.target.value)} />
-                  <input type="password" placeholder="Confirm New Password" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} />
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">New Login ID</label>
+                    <input 
+                      value={newLoginId} 
+                      onChange={e => setNewLoginId(e.target.value)} 
+                      className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" 
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">New Password (leave empty to keep current)</label>
+                    <input 
+                      type="password" 
+                      placeholder="New Password" 
+                      className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" 
+                      value={newPass} 
+                      onChange={e => setNewPass(e.target.value)} 
+                    />
+                  </div>
+                  {newPass && (
+                    <input 
+                      type="password" 
+                      placeholder="Confirm New Password" 
+                      className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" 
+                      value={confirmPass} 
+                      onChange={e => setConfirmPass(e.target.value)} 
+                    />
+                  )}
                   <div className="flex gap-3">
-                    <button onClick={changePassword} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-xl font-semibold">Save Password</button>
-                    <button onClick={() => setShowChange(false)} className="px-5 bg-[#2c2c2e] text-gray-300 rounded-xl">Cancel</button>
+                    <button onClick={saveChanges} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-xl font-semibold">Save Changes</button>
+                    <button onClick={() => { setShowEdit(false); setNewLoginId(user.id); setNewPass(''); setConfirmPass(''); }} className="px-5 bg-[#2c2c2e] text-gray-300 rounded-xl">Cancel</button>
                   </div>
                 </div>
+              )}
+
+              {/* Manage Users button for Admin on Mobile */}
+              {user.role === 'ADMIN' && (
+                <button 
+                  onClick={() => setTab('users')} 
+                  className="w-full bg-red-500/15 text-red-400 py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2 mt-2"
+                >
+                  <IconUsers /> Manage Users
+                </button>
               )}
             </div>
           </div>
