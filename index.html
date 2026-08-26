@@ -17,34 +17,14 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
-    :root {
-      --bg: #0b0b0e;
-      --card: #1c1c1e;
-      --header: rgba(11,11,14,0.95);
-      --border: #2c2c2e;
-      --text: #ffffff;
-      --muted: #8e8e93;
-      --input: #2c2c2e;
-    }
-    body.light {
-      --bg: #f2f2f7;
-      --card: #ffffff;
-      --header: rgba(242,242,247,0.95);
-      --border: #e5e5ea;
-      --text: #1c1c1e;
-      --muted: #8e8e93;
-      --input: #e5e5ea;
-    }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      margin: 0;
-      transition: background 0.3s, color 0.3s;
-    }
-    .card { background: var(--card); border-radius: 16px; }
-    .header { background: var(--header); border-bottom: 1px solid var(--border); }
-    .bottom-nav { background: var(--header); border-top: 1px solid var(--border); }
+    body { background: #0b0b0e; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; }
+    body.light { background: #f2f2f7; color: #1c1c1e; }
+    .card { background: #1c1c1e; border-radius: 16px; }
+    body.light .card { background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .header { background: rgba(11,11,14,0.95); border-bottom: 1px solid #2c2c2e; }
+    body.light .header { background: rgba(242,242,247,0.95); border-bottom: 1px solid #e5e5ea; }
+    .bottom-nav { background: rgba(20,20,23,0.95); border-top: 1px solid #2c2c2e; }
+    body.light .bottom-nav { background: rgba(242,242,247,0.95); border-top: 1px solid #e5e5ea; }
     .icon { display: inline-flex; align-items: center; justify-content: center; }
     .icon svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .chat-box { max-height: 50vh; overflow-y: auto; }
@@ -52,10 +32,11 @@
     .pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #3a3a3c; display: inline-block; }
     .pin-dot.filled { background: #ef4444; border-color: #ef4444; }
     .mention { color: #3b82f6; font-weight: 600; }
-    .broadcast-badge { background: linear-gradient(90deg, #ef4444, #ec4899); }
+    .input-bg { background: #2c2c2e; }
+    body.light .input-bg { background: #e5e5ea; color: #1c1c1e; }
   </style>
 </head>
-<body class="dark">
+<body>
   <div id="root"></div>
 
   <script type="text/babel">
@@ -89,35 +70,40 @@
         const { data: rows } = await supabase.from(table).select('*').order('created_at', { ascending: false });
         setData(rows || []);
       }, [table]);
+
       useEffect(() => {
         load();
-        const ch = supabase.channel(table).on('postgres_changes', { event: '*', schema: 'public', table }, load).subscribe();
-        return () => supabase.removeChannel(ch);
+        const channel = supabase.channel(table)
+          .on('postgres_changes', { event: '*', schema: 'public', table }, () => load())
+          .subscribe();
+        return () => supabase.removeChannel(channel);
       }, [table, load]);
+
       const add = async (row) => {
         const { error } = await supabase.from(table).insert([row]);
-        if (error) alert(error.message); else load();
+        if (error) alert(error.message);
+        else load();
       };
       const update = async (id, changes) => {
         const { error } = await supabase.from(table).update(changes).eq('id', id);
-        if (error) alert(error.message); else load();
+        if (error) alert(error.message);
+        else load();
       };
       const remove = async (id) => {
         const { error } = await supabase.from(table).delete().eq('id', id);
-        if (error) alert(error.message); else load();
+        if (error) alert(error.message);
+        else load();
       };
-      return { data, add, update, remove, load };
+      return { data, add, update, remove };
     }
 
     function linkifyAndMention(text) {
       if (!text) return text;
-      // First handle mentions
-      let parts = text.split(/(@\w+)/g);
+      const parts = text.split(/(@\w+)/g);
       return parts.map((part, i) => {
         if (part.startsWith('@')) {
           return <span key={i} className="mention">{part}</span>;
         }
-        // Then links
         const urlRegex = /(https?:\/\/[^\s]+)/g;
         return part.split(urlRegex).map((p, j) =>
           urlRegex.test(p) ? <a key={j} href={p} target="_blank" rel="noopener noreferrer">{p}</a> : p
@@ -130,7 +116,10 @@
       const ext = file.name ? file.name.split('.').pop() : 'webm';
       const fileName = Date.now() + '_' + Math.random().toString(36).substring(2, 8) + '.' + ext;
       const { error } = await supabase.storage.from('school-files').upload(fileName, file);
-      if (error) { alert('Upload failed: ' + error.message); return null; }
+      if (error) {
+        alert('Upload failed: ' + error.message);
+        return null;
+      }
       const { data } = supabase.storage.from('school-files').getPublicUrl(fileName);
       return data.publicUrl;
     }
@@ -140,10 +129,10 @@
       const [user, setUser] = useState(null);
       const [tab, setTab] = useState('home');
       const [mode, setMode] = useState('loading');
-      const [theme, setTheme] = useState(localStorage.getItem('bes_theme') || 'dark');
+      const [theme, setTheme] = useState(() => localStorage.getItem('bes_theme') || 'dark');
 
       useEffect(() => {
-        document.body.className = theme;
+        document.body.className = theme === 'light' ? 'light' : '';
         localStorage.setItem('bes_theme', theme);
       }, [theme]);
 
@@ -152,356 +141,791 @@
         if (saved) {
           try {
             const p = JSON.parse(saved);
-            if (p && p.pin) { setMode('pin'); return; }
-          } catch(e) {}
+            if (p && p.pin) {
+              setMode('pin');
+              return;
+            }
+          } catch (e) {}
         }
         setMode('login');
       }, []);
 
       const handlePasswordLogin = async (username, password) => {
-        const { data, error } = await supabase.from('users').select('*').eq('username', username.trim()).eq('password', password.trim()).maybeSingle();
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('username', username.trim())
+          .eq('password', password.trim())
+          .maybeSingle();
+
         if (error) return alert('Error: ' + error.message);
         if (!data) return alert('Invalid Login ID or Password');
+
         const userData = { id: data.username, name: data.full_name, role: data.role };
         setUser(userData);
+
         const saved = localStorage.getItem('bes_pin_user');
         if (saved) {
           try {
             const p = JSON.parse(saved);
-            if (p.username === data.username && p.pin) { setMode('app'); return; }
-          } catch(e) {}
+            if (p.username === data.username && p.pin) {
+              setMode('app');
+              return;
+            }
+          } catch (e) {}
         }
         setMode('setpin');
       };
 
-      const handlePinSuccess = (u) => { setUser(u); setMode('app'); };
-      const handleSetPin = (pin) => {
-        localStorage.setItem('bes_pin_user', JSON.stringify({ username: user.id, name: user.name, role: user.role, pin }));
+      const handlePinSuccess = (u) => {
+        setUser(u);
         setMode('app');
       };
-      const logout = () => { setUser(null); setTab('home'); setMode('pin'); };
-      const fullLogout = () => { localStorage.removeItem('bes_pin_user'); setUser(null); setTab('home'); setMode('login'); };
 
-      if (mode === 'loading') return <div className="min-h-screen flex items-center justify-center" style={{color:'var(--muted)'}}>Loading...</div>;
-      if (mode === 'pin') return <PinScreen onSuccess={handlePinSuccess} onUsePassword={() => setMode('login')} onFullLogout={fullLogout} theme={theme} setTheme={setTheme} />;
-      if (mode === 'login') return <LoginScreen onLogin={handlePasswordLogin} theme={theme} setTheme={setTheme} />;
-      if (mode === 'setpin') return <SetPinScreen onSave={handleSetPin} onSkip={() => setMode('app')} />;
+      const handleSetPin = (pin) => {
+        localStorage.setItem('bes_pin_user', JSON.stringify({
+          username: user.id,
+          name: user.name,
+          role: user.role,
+          pin
+        }));
+        setMode('app');
+      };
+
+      const logout = () => {
+        setUser(null);
+        setTab('home');
+        setMode('pin');
+      };
+
+      const fullLogout = () => {
+        localStorage.removeItem('bes_pin_user');
+        setUser(null);
+        setTab('home');
+        setMode('login');
+      };
+
+      if (mode === 'loading') {
+        return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading...</div>;
+      }
+
+      if (mode === 'pin') {
+        return <PinScreen onSuccess={handlePinSuccess} onUsePassword={() => setMode('login')} onFullLogout={fullLogout} theme={theme} setTheme={setTheme} />;
+      }
+
+      if (mode === 'login') {
+        return <LoginScreen onLogin={handlePasswordLogin} theme={theme} setTheme={setTheme} />;
+      }
+
+      if (mode === 'setpin') {
+        return <SetPinScreen onSave={handleSetPin} onSkip={() => setMode('app')} />;
+      }
 
       return (
-        <div className="min-h-screen flex flex-col md:flex-row" style={{background:'var(--bg)', color:'var(--text)'}}>
-          <aside className="hidden md:flex md:flex-col md:w-64 border-r p-4 sticky top-0 h-screen" style={{background:'var(--card)', borderColor:'var(--border)'}}>
+        <div className="min-h-screen flex flex-col md:flex-row">
+          <aside className="hidden md:flex md:flex-col md:w-64 border-r p-4 sticky top-0 h-screen" style={{ borderColor: theme === 'light' ? '#e5e5ea' : '#2c2c2e', background: theme === 'light' ? '#fff' : '#141416' }}>
             <div className="mb-8">
               <h1 className="text-lg font-bold">Bes An Noor Model School</h1>
-              <p className="text-xs" style={{color:'var(--muted)'}}>(Boys' Unit)</p>
+              <p className="text-xs text-gray-400">(Boys' Unit)</p>
             </div>
             <nav className="flex-1 space-y-1">
-              <SideBtn active={tab==='home'} onClick={()=>setTab('home')} icon={<IconHome/>} label="Home"/>
-              <SideBtn active={tab==='notices'} onClick={()=>setTab('notices')} icon={<IconClipboard/>} label="Notices"/>
-              <SideBtn active={tab==='schedule'} onClick={()=>setTab('schedule')} icon={<IconCalendar/>} label="Proxy / Replace"/>
-              <SideBtn active={tab==='report'} onClick={()=>setTab('report')} icon={<IconAlert/>} label="Report Issue"/>
-              <SideBtn active={tab==='chat'} onClick={()=>setTab('chat')} icon={<IconChat/>} label="Chat"/>
-              <SideBtn active={tab==='results'} onClick={()=>setTab('results')} icon={<IconFile/>} label="Exam Results"/>
-              <SideBtn active={tab==='profile'} onClick={()=>setTab('profile')} icon={<IconUser/>} label="Profile"/>
-              {user.role==='ADMIN' && <SideBtn active={tab==='users'} onClick={()=>setTab('users')} icon={<IconUsers/>} label="Manage Users"/>}
+              <SideBtn active={tab === 'home'} onClick={() => setTab('home')} icon={<IconHome />} label="Home" />
+              <SideBtn active={tab === 'notices'} onClick={() => setTab('notices')} icon={<IconClipboard />} label="Notices" />
+              <SideBtn active={tab === 'schedule'} onClick={() => setTab('schedule')} icon={<IconCalendar />} label="Proxy / Replace" />
+              <SideBtn active={tab === 'report'} onClick={() => setTab('report')} icon={<IconAlert />} label="Report Issue" />
+              <SideBtn active={tab === 'chat'} onClick={() => setTab('chat')} icon={<IconChat />} label="Chat" />
+              <SideBtn active={tab === 'results'} onClick={() => setTab('results')} icon={<IconFile />} label="Exam Results" />
+              <SideBtn active={tab === 'profile'} onClick={() => setTab('profile')} icon={<IconUser />} label="Profile" />
+              {user.role === 'ADMIN' && <SideBtn active={tab === 'users'} onClick={() => setTab('users')} icon={<IconUsers />} label="Manage Users" />}
             </nav>
-            <button onClick={logout} className="mt-4 flex items-center gap-2 text-sm" style={{color:'var(--muted)'}}><IconLogOut/> Logout</button>
+            <button onClick={logout} className="mt-4 flex items-center gap-2 text-sm text-gray-400">
+              <IconLogOut /> Logout
+            </button>
           </aside>
 
           <div className="flex-1 flex flex-col min-h-screen">
             <header className="header px-4 py-4 flex justify-between items-center sticky top-0 z-20 md:hidden">
               <div>
                 <h1 className="text-base font-bold">Bes An Noor Model School</h1>
-                <p className="text-xs" style={{color:'var(--muted)'}}>(Boys' Unit) · {user.name}</p>
+                <p className="text-xs text-gray-400">(Boys' Unit) · {user.name}</p>
               </div>
-              <button onClick={logout} className="w-10 h-10 rounded-full flex items-center justify-center" style={{background:'var(--input)'}}><IconLogOut/></button>
+              <button onClick={logout} className="w-10 h-10 rounded-full flex items-center justify-center input-bg">
+                <IconLogOut />
+              </button>
             </header>
 
             <header className="hidden md:flex header px-6 py-4 justify-between items-center sticky top-0 z-20">
-              <h2 className="text-lg font-semibold capitalize">{tab==='schedule'?'Proxy / Replace':tab}</h2>
-              <div className="text-sm" style={{color:'var(--muted)'}}>{user.name} · {user.role}</div>
+              <h2 className="text-lg font-semibold capitalize">{tab === 'schedule' ? 'Proxy / Replace' : tab}</h2>
+              <div className="text-sm text-gray-400">{user.name} · {user.role}</div>
             </header>
 
             <main className="flex-1 overflow-y-auto px-4 md:px-8 pb-24 md:pb-8 pt-4">
-              {tab==='home' && <Home user={user} setTab={setTab}/>}
-              {tab==='notices' && <Notices user={user}/>}
-              {tab==='schedule' && <ScheduleTab user={user}/>}
-              {tab==='report' && <ReportTab user={user}/>}
-              {tab==='chat' && <ChatTab user={user}/>}
-              {tab==='results' && <ResultsTab user={user}/>}
-              {tab==='profile' && <Profile user={user} setUser={setUser} setTab={setTab} onFullLogout={fullLogout} theme={theme} setTheme={setTheme}/>}
-              {tab==='users' && user.role==='ADMIN' && <Users/>}
+              {tab === 'home' && <Home user={user} setTab={setTab} />}
+              {tab === 'notices'Here is the **complete, clean and working code**.
+
+Just **copy everything** below and paste it into your `index.html` on GitHub (delete the old content first).
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bes An Noor Model School (Boys' Unit)</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0b0b0e">
+  <meta name="apple-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body { background: #0b0b0e; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; }
+    body.light { background: #f2f2f7; color: #1c1c1e; }
+    .card { background: #1c1c1e; border-radius: 16px; }
+    body.light .card { background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .header { background: rgba(11,11,14,0.95); border-bottom: 1px solid #2c2c2e; }
+    body.light .header { background: rgba(242,242,247,0.95); border-bottom: 1px solid #e5e5ea; }
+    .bottom-nav { background: rgba(20,20,23,0.95); border-top: 1px solid #2c2c2e; }
+    body.light .bottom-nav { background: rgba(242,242,247,0.95); border-top: 1px solid #e5e5ea; }
+    .icon { display: inline-flex; align-items: center; justify-content: center; }
+    .icon svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .chat-box { max-height: 50vh; overflow-y: auto; }
+    a { color: #60a5fa; text-decoration: underline; }
+    .pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #3a3a3c; display: inline-block; }
+    .pin-dot.filled { background: #ef4444; border-color: #ef4444; }
+    .mention { color: #3b82f6; font-weight: 600; }
+    .input-bg { background: #2c2c2e; }
+    body.light .input-bg { background: #e5e5ea; color: #1c1c1e; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useCallback, useRef } = React;
+
+    const SUPABASE_URL = 'https://peiybuhnozgqatdyrdhf.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlaXlidWhub3pncWF0ZHlyZGhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzIyNDEsImV4cCI6MjEwMjU0ODI0MX0.a_1otAvBMRa20HSA01jcvtCbxwUpXNbmCzVmA9Qm-DE';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Icons
+    const IconHome = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg></span>;
+    const IconClipboard = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></span>;
+    const IconCalendar = () => <span className="icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>;
+    const IconUser = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>;
+    const IconUsers = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span>;
+    const IconLogOut = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>;
+    const IconPlus = () => <span className="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span>;
+    const IconCheck = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>;
+    const IconAlert = () => <span className="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span>;
+    const IconEdit = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>;
+    const IconTrash = () => <span className="icon"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></span>;
+    const IconChat = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span>;
+    const IconFile = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>;
+    const IconMic = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></span>;
+    const IconSun = () => <span className="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></span>;
+    const IconMoon = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></span>;
+
+    function useCollection(table) {
+      const [data, setData] = useState([]);
+      const load = useCallback(async () => {
+        const { data: rows } = await supabase.from(table).select('*').order('created_at', { ascending: false });
+        setData(rows || []);
+      }, [table]);
+
+      useEffect(() => {
+        load();
+        const channel = supabase.channel(table)
+          .on('postgres_changes', { event: '*', schema: 'public', table }, () => load())
+          .subscribe();
+        return () => supabase.removeChannel(channel);
+      }, [table, load]);
+
+      const add = async (row) => {
+        const { error } = await supabase.from(table).insert([row]);
+        if (error) alert(error.message);
+        else load();
+      };
+      const update = async (id, changes) => {
+        const { error } = await supabase.from(table).update(changes).eq('id', id);
+        if (error) alert(error.message);
+        else load();
+      };
+      const remove = async (id) => {
+        const { error } = await supabase.from(table).delete().eq('id', id);
+        if (error) alert(error.message);
+        else load();
+      };
+      return { data, add, update, remove };
+    }
+
+    function linkifyAndMention(text) {
+      if (!text) return text;
+      const parts = text.split(/(@\w+)/g);
+      return parts.map((part, i) => {
+        if (part.startsWith('@')) {
+          return <span key={i} className="mention">{part}</span>;
+        }
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        return part.split(urlRegex).map((p, j) =>
+          urlRegex.test(p) ? <a key={j} href={p} target="_blank" rel="noopener noreferrer">{p}</a> : p
+        );
+      });
+    }
+
+    async function uploadFile(file) {
+      if (!file) return null;
+      const ext = file.name ? file.name.split('.').pop() : 'webm';
+      const fileName = Date.now() + '_' + Math.random().toString(36).substring(2, 8) + '.' + ext;
+      const { error } = await supabase.storage.from('school-files').upload(fileName, file);
+      if (error) {
+        alert('Upload failed: ' + error.message);
+        return null;
+      }
+      const { data } = supabase.storage.from('school-files').getPublicUrl(fileName);
+      return data.publicUrl;
+    }
+
+    // ==================== APP ====================
+    function App() {
+      const [user, setUser] = useState(null);
+      const [tab, setTab] = useState('home');
+      const [mode, setMode] = useState('loading');
+      const [theme, setTheme] = useState(() => localStorage.getItem('bes_theme') || 'dark');
+
+      useEffect(() => {
+        document.body.className = theme === 'light' ? 'light' : '';
+        localStorage.setItem('bes_theme', theme);
+      }, [theme]);
+
+      useEffect(() => {
+        const saved = localStorage.getItem('bes_pin_user');
+        if (saved) {
+          try {
+            const p = JSON.parse(saved);
+            if (p && p.pin) {
+              setMode('pin');
+              return;
+            }
+          } catch (e) {}
+        }
+        setMode('login');
+      }, []);
+
+      const handlePasswordLogin = async (username, password) => {
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('username', username.trim())
+          .eq('password', password.trim())
+          .maybeSingle();
+
+        if (error) return alert('Error: ' + error.message);
+        if (!data) return alert('Invalid Login ID or Password');
+
+        const userData = { id: data.username, name: data.full_name, role: data.role };
+        setUser(userData);
+
+        const saved = localStorage.getItem('bes_pin_user');
+        if (saved) {
+          try {
+            const p = JSON.parse(saved);
+            if (p.username === data.username && p.pin) {
+              setMode('app');
+              return;
+            }
+          } catch (e) {}
+        }
+        setMode('setpin');
+      };
+
+      const handlePinSuccess = (u) => {
+        setUser(u);
+        setMode('app');
+      };
+
+      const handleSetPin = (pin) => {
+        localStorage.setItem('bes_pin_user', JSON.stringify({
+          username: user.id,
+          name: user.name,
+          role: user.role,
+          pin
+        }));
+        setMode('app');
+      };
+
+      const logout = () => {
+        setUser(null);
+        setTab('home');
+        setMode('pin');
+      };
+
+      const fullLogout = () => {
+        localStorage.removeItem('bes_pin_user');
+        setUser(null);
+        setTab('home');
+        setMode('login');
+      };
+
+      if (mode === 'loading') {
+        return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading...</div>;
+      }
+
+      if (mode === 'pin') {
+        return <PinScreen onSuccess={handlePinSuccess} onUsePassword={() => setMode('login')} onFullLogout={fullLogout} theme={theme} setTheme={setTheme} />;
+      }
+
+      if (mode === 'login') {
+        return <LoginScreen onLogin={handlePasswordLogin} theme={theme} setTheme={setTheme} />;
+      }
+
+      if (mode === 'setpin') {
+        return <SetPinScreen onSave={handleSetPin} onSkip={() => setMode('app')} />;
+      }
+
+      return (
+        <div className="min-h-screen flex flex-col md:flex-row">
+          <aside className="hidden md:flex md:flex-col md:w-64 border-r p-4 sticky top-0 h-screen" style={{ borderColor: theme === 'light' ? '#e5e5ea' : '#2c2c2e', background: theme === 'light' ? '#fff' : '#141416' }}>
+            <div className="mb-8">
+              <h1 className="text-lg font-bold">Bes An Noor Model School</h1>
+              <p className="text-xs text-gray-400">(Boys' Unit)</p>
+            </div>
+            <nav className="flex-1 space-y-1">
+              <SideBtn active={tab === 'home'} onClick={() => setTab('home')} icon={<IconHome />} label="Home" />
+              <SideBtn active={tab === 'notices'} onClick={() => setTab('notices')} icon={<IconClipboard />} label="Notices" />
+              <SideBtn active={tab === 'schedule'} onClick={() => setTab('schedule')} icon={<IconCalendar />} label="Proxy / Replace" />
+              <SideBtn active={tab === 'report'} onClick={() => setTab('report')} icon={<IconAlert />} label="Report Issue" />
+              <SideBtn active={tab === 'chat'} onClick={() => setTab('chat')} icon={<IconChat />} label="Chat" />
+              <SideBtn active={tab === 'results'} onClick={() => setTab('results')} icon={<IconFile />} label="Exam Results" />
+              <SideBtn active={tab === 'profile'} onClick={() => setTab('profile')} icon={<IconUser />} label="Profile" />
+              {user.role === 'ADMIN' && <SideBtn active={tab === 'users'} onClick={() => setTab('users')} icon={<IconUsers />} label="Manage Users" />}
+            </nav>
+            <button onClick={logout} className="mt-4 flex items-center gap-2 text-sm text-gray-400">
+              <IconLogOut /> Logout
+            </button>
+          </aside>
+
+          <div className="flex-1 flex flex-col min-h-screen">
+            <header className="header px-4 py-4 flex justify-between items-center sticky top-0 z-20 md:hidden">
+              <div>
+                <h1 className="text-base font-bold">Bes An Noor Model School</h1>
+                <p className="text-xs text-gray-400">(Boys' Unit) · {user.name}</p>
+              </div>
+              <button onClick={logout} className="w-10 h-10 rounded-full flex items-center justify-center input-bg">
+                <IconLogOut />
+              </button>
+            </header>
+
+            <header className="hidden md:flex header px-6 py-4 justify-between items-center sticky top-0 z-20">
+              <h2 className="text-lg font-semibold capitalize">{tab === 'schedule' ? 'Proxy / Replace' : tab}</h2>
+              <div className="text-sm text-gray-400">{user.name} · {user.role}</div>
+            </header>
+
+            <main className="flex-1 overflow-y-auto px-4 md:px-8 pb-24 md:pb-8 pt-4">
+              {tab === 'home' && <Home user={user} setTab={setTab} />}
+              {tab === 'notices' && <Notices user={user} />}
+              {tab === 'schedule' && <ScheduleTab user={user} />}
+              {tab === 'report' && <ReportTab user={user} />}
+              {tab === 'chat' && <ChatTab user={user} />}
+              {tab === 'results' && <ResultsTab user={user} />}
+              {tab === 'profile' && <Profile user={user} setUser={setUser} setTab={setTab} onFullLogout={fullLogout} theme={theme} setTheme={setTheme} />}
+              {tab === 'users' && user.role === 'ADMIN' && <Users />}
             </main>
 
             <nav className="bottom-nav fixed bottom-0 left-0 right-0 flex justify-around py-2 z-20 md:hidden">
-              <NavBtn active={tab==='home'} onClick={()=>setTab('home')} icon={<IconHome/>} label="Home"/>
-              <NavBtn active={tab==='notices'} onClick={()=>setTab('notices')} icon={<IconClipboard/>} label="Notices"/>
-              <NavBtn active={tab==='schedule'} onClick={()=>setTab('schedule')} icon={<IconCalendar/>} label="Proxy"/>
-              <NavBtn active={tab==='chat'} onClick={()=>setTab('chat')} icon={<IconChat/>} label="Chat"/>
-              <NavBtn active={tab==='profile'} onClick={()=>setTab('profile')} icon={<IconUser/>} label="Profile"/>
+              <NavBtn active={tab === 'home'} onClick={() => setTab('home')} icon={<IconHome />} label="Home" />
+              <NavBtn active={tab === 'notices'} onClick={() => setTab('notices')} icon={<IconClipboard />} label="Notices" />
+              <NavBtn active={tab === 'schedule'} onClick={() => setTab('schedule')} icon={<IconCalendar />} label="Proxy" />
+              <NavBtn active={tab === 'chat'} onClick={() => setTab('chat')} icon={<IconChat />} label="Chat" />
+              <NavBtn active={tab === 'profile'} onClick={() => setTab('profile')} icon={<IconUser />} label="Profile" />
             </nav>
           </div>
         </div>
       );
     }
 
-    function SideBtn({active, onClick, icon, label}) {
-      return <button onClick={onClick} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm ${active?'bg-red-500/15 text-red-400':'hover:opacity-80'}`} style={{color: active?'':'var(--muted)'}}>{icon} {label}</button>;
+    function SideBtn({ active, onClick, icon, label }) {
+      return (
+        <button onClick={onClick} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm ${active ? 'bg-red-500/15 text-red-400' : 'text-gray-400'}`}>
+          {icon} {label}
+        </button>
+      );
     }
-    function NavBtn({active, onClick, icon, label}) {
-      return <button onClick={onClick} className={`flex flex-col items-center gap-0.5 text-[10px] ${active?'text-red-500':''}`} style={{color: active?'':'var(--muted)'}}>{icon}<span>{label}</span></button>;
+
+    function NavBtn({ active, onClick, icon, label }) {
+      return (
+        <button onClick={onClick} className={`flex flex-col items-center gap-0.5 text-[10px] ${active ? 'text-red-500' : 'text-gray-400'}`}>
+          {icon}<span>{label}</span>
+        </button>
+      );
     }
 
     // ==================== PIN ====================
-    function PinScreen({onSuccess, onUsePassword, onFullLogout, theme, setTheme}) {
+    function PinScreen({ onSuccess, onUsePassword, onFullLogout, theme, setTheme }) {
       const [pin, setPin] = useState('');
       const [error, setError] = useState('');
       const saved = JSON.parse(localStorage.getItem('bes_pin_user') || '{}');
-      const press = (n) => {
+
+      const press = (num) => {
         if (pin.length >= 4) return;
-        const next = pin + n;
-        setPin(next); setError('');
+        const next = pin + num;
+        setPin(next);
+        setError('');
         if (next.length === 4) {
-          if (next === saved.pin) onSuccess({id: saved.username, name: saved.name, role: saved.role});
-          else { setError('Wrong PIN'); setTimeout(()=>setPin(''), 500); }
+          if (next === saved.pin) {
+            onSuccess({ id: saved.username, name: saved.name, role: saved.role });
+          } else {
+            setError('Wrong PIN');
+            setTimeout(() => setPin(''), 500);
+          }
         }
       };
+
       return (
         <div className="min-h-screen flex items-center justify-center p-6">
           <div className="w-full max-w-xs text-center">
             <div className="flex justify-end mb-4">
-              <button onClick={() => setTheme(theme==='dark'?'light':'dark')} className="p-2 rounded-full" style={{background:'var(--input)'}}>
-                {theme==='dark' ? <IconSun/> : <IconMoon/>}
+              <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="p-2 rounded-full input-bg">
+                {theme === 'dark' ? <IconSun /> : <IconMoon />}
               </button>
             </div>
-            <img src="logo.png" className="w-20 h-20 mx-auto mb-4 object-contain" onError={e=>e.target.style.display='none'}/>
+            <img src="logo.png" className="w-20 h-20 mx-auto mb-4 object-contain" onError={e => e.target.style.display = 'none'} />
             <h2 className="text-xl font-bold mb-1">Welcome back</h2>
-            <p className="mb-8" style={{color:'var(--muted)'}}>{saved.name || 'User'}</p>
-            <div className="flex justify-center gap-3 mb-6">{[0,1,2,3].map(i => <div key={i} className={`pin-dot ${pin.length>i?'filled':''}`}></div>)}</div>
+            <p className="text-gray-400 mb-8">{saved.name || 'User'}</p>
+            <div className="flex justify-center gap-3 mb-6">
+              {[0,1,2,3].map(i => <div key={i} className={`pin-dot ${pin.length > i ? 'filled' : ''}`}></div>)}
+            </div>
             {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
             <div className="grid grid-cols-3 gap-3 mb-8">
-              {[1,2,3,4,5,6,7,8,9].map(n => <button key={n} onClick={()=>press(String(n))} className="h-14 rounded-full text-xl font-medium active:scale-95" style={{background:'var(--input)'}}>{n}</button>)}
+              {[1,2,3,4,5,6,7,8,9].map(n => (
+                <button key={n} onClick={() => press(String(n))} className="h-14 rounded-full text-xl font-medium input-bg active:scale-95">{n}</button>
+              ))}
               <div></div>
-              <button onClick={()=>press('0')} className="h-14 rounded-full text-xl font-medium active:scale-95" style={{background:'var(--input)'}}>0</button>
-              <button onClick={()=>setPin(pin.slice(0,-1))} className="h-14 rounded-full text-lg active:scale-95" style={{background:'var(--input)'}}>⌫</button>
+              <button onClick={() => press('0')} className="h-14 rounded-full text-xl font-medium input-bg active:scale-95">0</button>
+              <button onClick={() => setPin(pin.slice(0, -1))} className="h-14 rounded-full text-lg input-bg active:scale-95">⌫</button>
             </div>
-            <button onClick={onUsePassword} className="text-sm underline block w-full mb-3" style={{color:'var(--muted)'}}>Use Password instead</button>
+            <button onClick={onUsePassword} className="text-sm text-gray-400 underline block w-full mb-3">Use Password instead</button>
             <button onClick={onFullLogout} className="text-sm text-red-400">Logout Completely</button>
           </div>
         </div>
       );
     }
 
-    function SetPinScreen({onSave, onSkip}) {
+    function SetPinScreen({ onSave, onSkip }) {
       const [pin, setPin] = useState('');
       const [confirm, setConfirm] = useState('');
       const [step, setStep] = useState(1);
-      const press = (n) => {
-        if (step===1) {
-          if (pin.length>=4) return;
-          const next = pin+n; setPin(next);
-          if (next.length===4) setTimeout(()=>setStep(2), 250);
+
+      const press = (num) => {
+        if (step === 1) {
+          if (pin.length >= 4) return;
+          const next = pin + num;
+          setPin(next);
+          if (next.length === 4) setTimeout(() => setStep(2), 250);
         } else {
-          if (confirm.length>=4) return;
-          const next = confirm+n; setConfirm(next);
-          if (next.length===4) {
-            if (next===pin) onSave(next);
-            else { alert('PIN does not match'); setPin(''); setConfirm(''); setStep(1); }
+          if (confirm.length >= 4) return;
+          const next = confirm + num;
+          setConfirm(next);
+          if (next.length === 4) {
+            if (next === pin) onSave(next);
+            else {
+              alert('PIN does not match');
+              setPin('');
+              setConfirm('');
+              setStep(1);
+            }
           }
         }
       };
-      const current = step===1 ? pin : confirm;
+
+      const current = step === 1 ? pin : confirm;
+
       return (
         <div className="min-h-screen flex items-center justify-center p-6">
           <div className="w-full max-w-xs text-center">
-            <h2 className="text-xl font-bold mb-2">{step===1?'Create PIN':'Confirm PIN'}</h2>
-            <p className="mb-8" style={{color:'var(--muted)'}}>{step===1?'Set a 4-digit PIN for quick login':'Enter the same PIN again'}</p>
-            <div className="flex justify-center gap-3 mb-8">{[0,1,2,3].map(i => <div key={i} className={`pin-dot ${current.length>i?'filled':''}`}></div>)}</div>
-            <div className="grid grid-cols-3 gap-3 mb-8">
-              {[1,2,3,4,5,6,7,8,9].map(n => <button key={n} onClick={()=>press(String(n))} className="h-14 rounded-full text-xl font-medium active:scale-95" style={{background:'var(--input)'}}>{n}</button>)}
-              <div></div>
-              <button onClick={()=>press('0')} className="h-14 rounded-full text-xl font-medium active:scale-95" style={{background:'var(--input)'}}>0</button>
-              <button onClick={()=> step===1?setPin(pin.slice(0,-1)):setConfirm(confirm.slice(0,-1))} className="h-14 rounded-full text-lg active:scale-95" style={{background:'var(--input)'}}>⌫</button>
+            <h2 className="text-xl font-bold mb-2">{step === 1 ? 'Create PIN' : 'Confirm PIN'}</h2>
+            <p className="text-gray-400 mb-8">{step === 1 ? 'Set a 4-digit PIN for quick login' : 'Enter the same PIN again'}</p>
+            <div className="flex justify-center gap-3 mb-8">
+              {[0,1,2,3].map(i => <div key={i} className={`pin-dot ${current.length > i ? 'filled' : ''}`}></div>)}
             </div>
-            <button onClick={onSkip} className="text-sm underline" style={{color:'var(--muted)'}}>Skip for now</button>
+            <div className="grid grid-cols-3 gap-3 mb-8">
+              {[1,2,3,4,5,6,7,8,9].map(n => (
+                <button key={n} onClick={() => press(String(n))} className="h-14 rounded-full text-xl font-medium input-bg active:scale-95">{n}</button>
+              ))}
+              <div></div>
+              <button onClick={() => press('0')} className="h-14 rounded-full text-xl font-medium input-bg active:scale-95">0</button>
+              <button onClick={() => step === 1 ? setPin(pin.slice(0, -1)) : setConfirm(confirm.slice(0, -1))} className="h-14 rounded-full text-lg input-bg active:scale-95">⌫</button>
+            </div>
+            <button onClick={onSkip} className="text-sm text-gray-400 underline">Skip for now</button>
           </div>
         </div>
       );
     }
 
     // ==================== LOGIN ====================
-    function LoginScreen({onLogin, theme, setTheme}) {
+    function LoginScreen({ onLogin, theme, setTheme }) {
       const [id, setId] = useState('');
       const [pass, setPass] = useState('');
       const [loading, setLoading] = useState(false);
+
       const submit = async () => {
         if (!id.trim() || !pass.trim()) return alert('Enter Login ID and Password');
         setLoading(true);
         await onLogin(id, pass);
         setLoading(false);
       };
+
       return (
         <div className="min-h-screen flex items-center justify-center p-4">
           <div className="w-full max-w-sm">
             <div className="flex justify-end mb-4">
-              <button onClick={() => setTheme(theme==='dark'?'light':'dark')} className="flex items-center gap-2 px-3 py-2 rounded-full text-sm" style={{background:'var(--input)'}}>
-                {theme==='dark' ? <><IconSun/> Light</> : <><IconMoon/> Dark</>}
+              <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="flex items-center gap-2 px-3 py-2 rounded-full text-sm input-bg">
+                {theme === 'dark' ? <><IconSun /> Light</> : <><IconMoon /> Dark</>}
               </button>
             </div>
             <div className="text-center mb-8">
-              <img src="logo.png" className="w-28 h-28 mx-auto mb-4 object-contain" onError={e=>e.target.style.display='none'}/>
+              <img src="logo.png" className="w-28 h-28 mx-auto mb-4 object-contain" onError={e => e.target.style.display = 'none'} />
               <h1 className="text-2xl font-bold">Bes An Noor Model School</h1>
-              <p className="mt-1" style={{color:'var(--muted)'}}>(Boys' Unit)</p>
+              <p className="text-gray-400 mt-1">(Boys' Unit)</p>
             </div>
             <div className="card p-6 space-y-4">
-              <input value={id} onChange={e=>setId(e.target.value)} placeholder="Login ID" className="w-full p-3 rounded-xl border" style={{background:'var(--input)', borderColor:'var(--border)', color:'var(--text)'}}/>
-              <input type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="Password" className="w-full p-3 rounded-xl border" style={{background:'var(--input)', borderColor:'var(--border)', color:'var(--text)'}}/>
-              <button onClick={submit} disabled={loading} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">{loading?'Please wait...':'Continue'}</button>
+              <input value={id} onChange={e => setId(e.target.value)} placeholder="Login ID" className="w-full p-3 rounded-xl input-bg" />
+              <input type="password" value={pass} onChange={e => setPass(e.target.value)} placeholder="Password" className="w-full p-3 rounded-xl input-bg" />
+              <button onClick={submit} disabled={loading} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">
+                {loading ? 'Please wait...' : 'Continue'}
+              </button>
             </div>
           </div>
         </div>
       );
     }
 
-    // ==================== HOME (same as before, shortened for space) ====================
-    function Home({user, setTab}) {
-      const {data: attendance, add, update} = useCollection('attendance');
+    // ==================== HOME ====================
+    function Home({ user, setTab }) {
+      const { data: attendance, add, update } = useCollection('attendance');
       const today = new Date().toISOString().split('T')[0];
-      const mine = attendance.find(a => a.date===today && a.teacher_id===user.id);
-      const todayList = attendance.filter(a => a.date===today);
+      const mine = attendance.find(a => a.date === today && a.teacher_id === user.id);
+      const todayList = attendance.filter(a => a.date === today);
       const [showForm, setShowForm] = useState(false);
-      const [form, setForm] = useState({reason:'', from_date:today, to_date:'', leave_time:'Morning', return_date:'', return_time:''});
+      const [form, setForm] = useState({ reason: '', from_date: today, to_date: '', leave_time: 'Morning', return_date: '', return_time: '' });
 
       const markPresent = () => {
-        if (mine) update(mine.id, {status:'PRESENT', reason:null, from_date:null, to_date:null, leave_time:null, return_date:null, return_time:null});
-        else add({date:today, teacher_id:user.id, name:user.name, status:'PRESENT'});
+        if (mine) update(mine.id, { status: 'PRESENT', reason: null, from_date: null, to_date: null, leave_time: null, return_date: null, return_time: null });
+        else add({ date: today, teacher_id: user.id, name: user.name, status: 'PRESENT' });
         setShowForm(false);
       };
+
       const submitAbsent = () => {
-        if (!form.reason || !form.to_date || !form.return_date) return alert('Fill required fields');
-        const payload = {date:today, teacher_id:user.id, name:user.name, status:'ABSENT', ...form};
-        if (mine) update(mine.id, payload); else add(payload);
+        if (!form.reason || !form.to_date || !form.return_date) return alert('Please fill required fields');
+        const payload = { date: today, teacher_id: user.id, name: user.name, status: 'ABSENT', ...form };
+        if (mine) update(mine.id, payload);
+        else add(payload);
         setShowForm(false);
       };
 
       return (
         <div className="space-y-6 max-w-4xl">
           <div className="card p-5 flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center text-white"><IconUser/></div>
-            <div><h2 className="font-bold text-xl">Welcome, {user.name}</h2><p className="text-sm" style={{color:'var(--muted)'}}>{user.role}</p></div>
+            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center text-white">
+              <IconUser />
+            </div>
+            <div>
+              <h2 className="font-bold text-xl">Welcome, {user.name}</h2>
+              <p className="text-sm text-gray-400">{user.role}</p>
+            </div>
           </div>
+
           <div className="card p-5">
             <h3 className="font-bold text-lg mb-1">Daily Attendance</h3>
-            <p className="text-sm mb-4" style={{color:'var(--muted)'}}>{new Date().toDateString()}</p>
-            {mine && <div className="mb-4"><span className={`inline-block px-4 py-2 rounded-full text-sm font-medium ${mine.status==='PRESENT'?'text-green-400 bg-green-500/10':'text-orange-400 bg-orange-500/10'}`}>Current: {mine.status}</span></div>}
+            <p className="text-sm text-gray-400 mb-4">{new Date().toDateString()}</p>
+
+            {mine && (
+              <div className="mb-4">
+                <span className={`inline-block px-4 py-2 rounded-full text-sm font-medium ${mine.status === 'PRESENT' ? 'text-green-400 bg-green-500/10' : 'text-orange-400 bg-orange-500/10'}`}>
+                  Current: {mine.status}
+                </span>
+              </div>
+            )}
+
             {!showForm ? (
               <div className="flex gap-3">
                 <button onClick={markPresent} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-full text-sm font-semibold">Present</button>
-                <button onClick={()=>setShowForm(true)} className="flex-1 border border-orange-500/40 text-orange-400 py-3 rounded-full text-sm font-semibold" style={{background:'var(--input)'}}>Absent</button>
+                <button onClick={() => setShowForm(true)} className="flex-1 border border-orange-500/40 text-orange-400 py-3 rounded-full text-sm font-semibold input-bg">Absent</button>
               </div>
             ) : (
               <div className="space-y-3">
-                <textarea placeholder="Reason *" className="w-full p-3 rounded-xl min-h-[80px]" style={{background:'var(--input)'}} value={form.reason} onChange={e=>setForm({...form, reason:e.target.value})}/>
+                <textarea placeholder="Reason for absence *" className="w-full p-3 rounded-xl min-h-[80px] input-bg" value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} />
                 <div className="grid grid-cols-2 gap-3">
-                  <input type="date" className="p-3 rounded-xl" style={{background:'var(--input)'}} value={form.from_date} onChange={e=>setForm({...form, from_date:e.target.value})}/>
-                  <input type="date" className="p-3 rounded-xl" style={{background:'var(--input)'}} value={form.to_date} onChange={e=>setForm({...form, to_date:e.target.value})}/>
+                  <input type="date" className="p-3 rounded-xl input-bg" value={form.from_date} onChange={e => setForm({ ...form, from_date: e.target.value })} />
+                  <input type="date" className="p-3 rounded-xl input-bg" value={form.to_date} onChange={e => setForm({ ...form, to_date: e.target.value })} />
                 </div>
-                <select className="w-full p-3 rounded-xl" style={{background:'var(--input)'}} value={form.leave_time} onChange={e=>setForm({...form, leave_time:e.target.value})}><option>Morning</option><option>Afternoon</option><option>Evening</option></select>
+                <select className="w-full p-3 rounded-xl input-bg" value={form.leave_time} onChange={e => setForm({ ...form, leave_time: e.target.value })}>
+                  <option>Morning</option><option>Afternoon</option><option>Evening</option>
+                </select>
                 <div className="grid grid-cols-2 gap-3">
-                  <input type="date" className="p-3 rounded-xl" style={{background:'var(--input)'}} value={form.return_date} onChange={e=>setForm({...form, return_date:e.target.value})}/>
-                  <input type="time" className="p-3 rounded-xl" style={{background:'var(--input)'}} value={form.return_time} onChange={e=>setForm({...form, return_time:e.target.value})}/>
+                  <input type="date" className="p-3 rounded-xl input-bg" value={form.return_date} onChange={e => setForm({ ...form, return_date: e.target.value })} />
+                  <input type="time" className="p-3 rounded-xl input-bg" value={form.return_time} onChange={e => setForm({ ...form, return_time: e.target.value })} />
                 </div>
                 <div className="flex gap-3">
                   <button onClick={submitAbsent} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-xl font-semibold">Submit</button>
-                  <button onClick={()=>setShowForm(false)} className="px-5 rounded-xl" style={{background:'var(--input)'}}>Cancel</button>
+                  <button onClick={() => setShowForm(false)} className="px-5 rounded-xl input-bg">Cancel</button>
                 </div>
               </div>
             )}
           </div>
-          {user.role==='ADMIN' && (
+
+          {user.role === 'ADMIN' && (
             <div className="card p-5">
               <h3 className="font-semibold mb-4">Today's Attendance</h3>
-              {todayList.length===0 ? <p className="text-sm" style={{color:'var(--muted)'}}>No attendance yet</p> : todayList.map(a => (
-                <div key={a.id} className="rounded-xl p-4 mb-2" style={{background:'var(--input)'}}>
-                  <div className="flex justify-between"><span className="font-medium">{a.name}</span><span className={a.status==='PRESENT'?'text-green-400':'text-orange-400'}>{a.status}</span></div>
-                </div>
-              ))}
+              {todayList.length === 0 ? (
+                <p className="text-sm text-gray-400">No attendance yet</p>
+              ) : (
+                todayList.map(a => (
+                  <div key={a.id} className="rounded-xl p-4 mb-2 input-bg">
+                    <div className="flex justify-between">
+                      <span className="font-medium">{a.name}</span>
+                      <span className={a.status === 'PRESENT' ? 'text-green-400' : 'text-orange-400'}>{a.status}</span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
+
           <div>
-            <h3 className="font-semibold mb-3" style={{color:'var(--muted)'}}>Quick Actions</h3>
+            <h3 className="font-semibold mb-3 text-gray-400">Quick Actions</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              <ActionCard icon={<IconClipboard/>} title="Notices" onClick={()=>setTab('notices')}/>
-              <ActionCard icon={<IconCalendar/>} title="Proxy / Replace" onClick={()=>setTab('schedule')}/>
-              <ActionCard icon={<IconAlert/>} title="Report Issue" onClick={()=>setTab('report')}/>
-              <ActionCard icon={<IconChat/>} title="Chat" onClick={()=>setTab('chat')}/>
-              <ActionCard icon={<IconFile/>} title="Exam Results" onClick={()=>setTab('results')}/>
-              <ActionCard icon={<IconUser/>} title="Profile" onClick={()=>setTab('profile')}/>
+              <ActionCard icon={<IconClipboard />} title="Notices" onClick={() => setTab('notices')} />
+              <ActionCard icon={<IconCalendar />} title="Proxy / Replace" onClick={() => setTab('schedule')} />
+              <ActionCard icon={<IconAlert />} title="Report Issue" onClick={() => setTab('report')} />
+              <ActionCard icon={<IconChat />} title="Chat" onClick={() => setTab('chat')} />
+              <ActionCard icon={<IconFile />} title="Exam Results" onClick={() => setTab('results')} />
+              <ActionCard icon={<IconUser />} title="Profile" onClick={() => setTab('profile')} />
             </div>
           </div>
         </div>
       );
     }
-    function ActionCard({icon, title, onClick}) {
-      return <button onClick={onClick} className="card p-4 text-left"><div className="text-red-400 mb-2">{icon}</div><div className="font-semibold text-sm">{title}</div></button>;
+
+    function ActionCard({ icon, title, onClick }) {
+      return (
+        <button onClick={onClick} className="card p-4 text-left">
+          <div className="text-red-400 mb-2">{icon}</div>
+          <div className="font-semibold text-sm">{title}</div>
+        </button>
+      );
     }
 
-    // ==================== NOTICES (simplified) ====================
-    function Notices({user}) {
-      const {data, add, update, remove} = useCollection('notices');
-      const {data: comments, add: addComment, remove: removeComment} = useCollection('comments');
+    // ==================== NOTICES ====================
+    function Notices({ user }) {
+      const { data, add, update, remove } = useCollection('notices');
+      const { data: comments, add: addComment, remove: removeComment } = useCollection('comments');
       const [show, setShow] = useState(false);
       const [editId, setEditId] = useState(null);
       const [title, setTitle] = useState('');
       const [content, setContent] = useState('');
       const [file, setFile] = useState(null);
       const [cText, setCText] = useState({});
+
       const save = async () => {
-        if (!title || !content) return alert('Title & content required');
-        let file_url = file ? await uploadFile(file) : null;
-        if (file && !file_url) return;
-        if (editId) update(editId, {title, content, ...(file_url&&{file_url})});
-        else add({title, content, type:'text', author:user.name, file_url});
-        setShow(false); setEditId(null); setTitle(''); setContent(''); setFile(null);
+        if (!title || !content) return alert('Title and content required');
+        let file_url = null;
+        if (file) {
+          file_url = await uploadFile(file);
+          if (!file_url) return;
+        }
+        if (editId) {
+          update(editId, { title, content, ...(file_url && { file_url }) });
+        } else {
+          add({ title, content, type: 'text', author: user.name, file_url });
+        }
+        setShow(false);
+        setEditId(null);
+        setTitle('');
+        setContent('');
+        setFile(null);
       };
+
       return (
         <div className="space-y-5 max-w-3xl">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold">Notices</h2>
-            {user.role==='ADMIN' && <button onClick={()=>{setShow(!show); setEditId(null);}} className="text-red-500 bg-red-500/10 p-2 rounded-full"><IconPlus/></button>}
+            {user.role === 'ADMIN' && (
+              <button onClick={() => { setShow(!show); setEditId(null); }} className="text-red-500 bg-red-500/10 p-2 rounded-full">
+                <IconPlus />
+              </button>
+            )}
           </div>
+
           {show && (
             <div className="card p-5 space-y-3">
-              <input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Title" className="w-full p-3 rounded-xl" style={{background:'var(--input)'}}/>
-              <textarea value={content} onChange={e=>setContent(e.target.value)} placeholder="Write notice..." className="w-full p-3 rounded-xl min-h-[100px]" style={{background:'var(--input)'}}/>
-              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e=>setFile(e.target.files[0])} className="text-sm"/>
+              <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" className="w-full p-3 rounded-xl input-bg" />
+              <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Write notice..." className="w-full p-3 rounded-xl min-h-[100px] input-bg" />
+              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e => setFile(e.target.files[0])} className="text-sm" />
               <div className="flex gap-3">
-                <button onClick={save} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-xl font-bold">{editId?'Update':'Publish'}</button>
-                <button onClick={()=>setShow(false)} className="px-5 rounded-xl" style={{background:'var(--input)'}}>Cancel</button>
+                <button onClick={save} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-xl font-bold">{editId ? 'Update' : 'Publish'}</button>
+                <button onClick={() => setShow(false)} className="px-5 rounded-xl input-bg">Cancel</button>
               </div>
             </div>
           )}
+
           {data.map(n => {
-            const nComments = comments.filter(c => c.target_type==='notice' && c.target_id===String(n.id));
-            const canEdit = user.role==='ADMIN' || n.author===user.name;
+            const nComments = comments.filter(c => c.target_type === 'notice' && c.target_id === String(n.id));
+            const canEdit = user.role === 'ADMIN' || n.author === user.name;
             return (
               <div key={n.id} className="card p-5 border-l-4 border-red-500">
                 <div className="flex justify-between">
-                  <div><h3 className="font-bold text-lg">{n.title}</h3><p className="text-xs" style={{color:'var(--muted)'}}>By {n.author}</p></div>
-                  {canEdit && <div className="flex gap-2"><button onClick={()=>{setEditId(n.id); setTitle(n.title); setContent(n.content); setShow(true);}} className="text-blue-400"><IconEdit/></button>{user.role==='ADMIN' && <button onClick={()=>confirm('Delete?')&&remove(n.id)} className="text-red-400"><IconTrash/></button></div>}
+                  <div>
+                    <h3 className="font-bold text-lg">{n.title}</h3>
+                    <p className="text-xs text-gray-400">By {n.author}</p>
+                  </div>
+                  {canEdit && (
+                    <div className="flex gap-2">
+                      <button onClick={() => { setEditId(n.id); setTitle(n.title); setContent(n.content); setShow(true); }} className="text-blue-400"><IconEdit /></button>
+                      {user.role === 'ADMIN' && <button onClick={() => confirm('Delete?') && remove(n.id)} className="text-red-400"><IconTrash /></button>}
+                    </div>
+                  )}
                 </div>
                 <p className="text-sm mt-2 whitespace-pre-wrap">{linkifyAndMention(n.content)}</p>
-                {n.file_url && <a href={n.file_url} target="_blank" className="text-blue-400 text-sm flex items-center gap-1 mt-2"><IconFile/> Attachment</a>}
-                <div className="mt-4 border-t pt-3" style={{borderColor:'var(--border)'}}>
-                  <p className="text-xs mb-2" style={{color:'var(--muted)'}}>Comments ({nComments.length})</p>
+                {n.file_url && <a href={n.file_url} target="_blank" className="text-blue-400 text-sm flex items-center gap-1 mt-2"><IconFile /> Attachment</a>}
+
+                <div className="mt-4 border-t border-gray-700 pt-3">
+                  <p className="text-xs text-gray-400 mb-2">Comments ({nComments.length})</p>
                   {nComments.map(c => (
-                    <div key={c.id} className="rounded-lg p-3 mb-2 text-sm" style={{background:'var(--input)'}}>
-                      <div className="flex justify-between"><span className="text-red-400 font-medium">{c.user_name}</span>{(user.role==='ADMIN'||c.user_name===user.name) && <button onClick={()=>removeComment(c.id)} className="text-red-400 text-xs">Delete</button>}</div>
+                    <div key={c.id} className="rounded-lg p-3 mb-2 text-sm input-bg">
+                      <div className="flex justify-between">
+                        <span className="text-red-400 font-medium">{c.user_name}</span>
+                        {(user.role === 'ADMIN' || c.user_name === user.name) && (
+                          <button onClick={() => removeComment(c.id)} className="text-red-400 text-xs">Delete</button>
+                        )}
+                      </div>
                       <p className="mt-1">{linkifyAndMention(c.content)}</p>
                     </div>
                   ))}
                   <div className="flex gap-2 mt-2">
-                    <input value={cText[n.id]||''} onChange={e=>setCText({...cText,[n.id]:e.target.value})} placeholder="Write comment..." className="flex-1 p-2 rounded-lg text-sm" style={{background:'var(--input)'}}/>
-                    <button onClick={()=>{if(cText[n.id]?.trim()){addComment({target_type:'notice',target_id:String(n.id),user_name:user.name,content:cText[n.id]}); setCText({...cText,[n.id]:''});}}} className="bg-red-500 text-white px-4 rounded-lg text-sm">Post</button>
+                    <input
+                      value={cText[n.id] || ''}
+                      onChange={e => setCText({ ...cText, [n.id]: e.target.value })}
+                      placeholder="Write comment..."
+                      className="flex-1 p-2 rounded-lg text-sm input-bg"
+                    />
+                    <button
+                      onClick={() => {
+                        if (cText[n.id]?.trim()) {
+                          addComment({ target_type: 'notice', target_id: String(n.id), user_name: user.name, content: cText[n.id] });
+                          setCText({ ...cText, [n.id]: '' });
+                        }
+                      }}
+                      className="bg-red-500 text-white px-4 rounded-lg text-sm"
+                    >
+                      Post
+                    </button>
                   </div>
                 </div>
               </div>
@@ -511,156 +935,198 @@
       );
     }
 
-    // ==================== SCHEDULE (simplified) ====================
-    function ScheduleTab({user}) {
-      const {data, add, update, remove} = useCollection('proxies');
+    // ==================== SCHEDULE ====================
+    function ScheduleTab({ user }) {
+      const { data, add } = useCollection('proxies');
       const today = new Date().toISOString().split('T')[0];
-      const todayItems = data.filter(p => p.date===today);
+      const todayItems = data.filter(p => p.date === today);
       const [show, setShow] = useState(false);
-      const [form, setForm] = useState({date:today, type:'PROXY', absent_teacher:'', proxy_teacher:'', class_room:'', subject:''});
+      const [form, setForm] = useState({ date: today, type: 'PROXY', absent_teacher: '', proxy_teacher: '', class_room: '', subject: '' });
+
       const save = () => {
-        if (!form.date || !form.proxy_teacher) return alert('Required fields missing');
+        if (!form.date || !form.proxy_teacher) return alert('Date and Teacher required');
         add(form);
         setShow(false);
-        setForm({date:today, type:'PROXY', absent_teacher:'', proxy_teacher:'', class_room:'', subject:''});
+        setForm({ date: today, type: 'PROXY', absent_teacher: '', proxy_teacher: '', class_room: '', subject: '' });
       };
+
       return (
         <div className="space-y-5 max-w-3xl">
           <div className="flex justify-between items-center">
-            <div><h2 className="text-2xl font-bold">Proxy / Replace</h2><p className="text-sm" style={{color:'var(--muted)'}}>Today only</p></div>
-            {user.role==='ADMIN' && <button onClick={()=>setShow(!show)} className="bg-red-500/15 text-red-400 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2"><IconPlus/> Add</button>}
+            <div>
+              <h2 className="text-2xl font-bold">Proxy / Replace</h2>
+              <p className="text-sm text-gray-400">Today only</p>
+            </div>
+            {user.role === 'ADMIN' && (
+              <button onClick={() => setShow(!show)} className="bg-red-500/15 text-red-400 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2">
+                <IconPlus /> Add
+              </button>
+            )}
           </div>
-          {show && user.role==='ADMIN' && (
+
+          {show && user.role === 'ADMIN' && (
             <div className="card p-5 space-y-3">
-              <select className="w-full p-3 rounded-xl" style={{background:'var(--input)'}} value={form.type} onChange={e=>setForm({...form,type:e.target.value})}><option value="PROXY">Proxy</option><option value="REPLACE">Replace</option></select>
-              <input type="date" className="w-full p-3 rounded-xl" style={{background:'var(--input)'}} value={form.date} onChange={e=>setForm({...form,date:e.target.value})}/>
-              <input placeholder="Absent Teacher" className="w-full p-3 rounded-xl" style={{background:'var(--input)'}} value={form.absent_teacher} onChange={e=>setForm({...form,absent_teacher:e.target.value})}/>
-              <input placeholder="Proxy Teacher" className="w-full p-3 rounded-xl" style={{background:'var(--input)'}} value={form.proxy_teacher} onChange={e=>setForm({...form,proxy_teacher:e.target.value})}/>
+              <select className="w-full p-3 rounded-xl input-bg" value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
+                <option value="PROXY">Proxy Class</option>
+                <option value="REPLACE">Replace Class</option>
+              </select>
+              <input type="date" className="w-full p-3 rounded-xl input-bg" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
+              <input placeholder="Absent Teacher" className="w-full p-3 rounded-xl input-bg" value={form.absent_teacher} onChange={e => setForm({ ...form, absent_teacher: e.target.value })} />
+              <input placeholder="Proxy Teacher" className="w-full p-3 rounded-xl input-bg" value={form.proxy_teacher} onChange={e => setForm({ ...form, proxy_teacher: e.target.value })} />
               <div className="grid grid-cols-2 gap-3">
-                <input placeholder="Class" className="p-3 rounded-xl" style={{background:'var(--input)'}} value={form.class_room} onChange={e=>setForm({...form,class_room:e.target.value})}/>
-                <input placeholder="Subject" className="p-3 rounded-xl" style={{background:'var(--input)'}} value={form.subject} onChange={e=>setForm({...form,subject:e.target.value})}/>
+                <input placeholder="Class" className="p-3 rounded-xl input-bg" value={form.class_room} onChange={e => setForm({ ...form, class_room: e.target.value })} />
+                <input placeholder="Subject" className="p-3 rounded-xl input-bg" value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })} />
               </div>
               <button onClick={save} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-xl font-bold">Save</button>
             </div>
           )}
-          {todayItems.map(p => (
-            <div key={p.id} className="card p-5 border-l-4 border-red-500">
-              <div className="flex gap-2 text-xs mb-3">
-                <span className={`px-3 py-1 rounded-full ${p.type==='REPLACE'?'bg-blue-500/20 text-blue-400':'bg-red-500/20 text-red-400'}`}>{p.type||'PROXY'}</span>
-                <span className="px-3 py-1 rounded-full" style={{background:'var(--input)'}}>{p.class_room}</span>
+
+          {todayItems.length === 0 ? (
+            <p className="text-center text-gray-400 py-12">No classes today</p>
+          ) : (
+            todayItems.map(p => (
+              <div key={p.id} className="card p-5 border-l-4 border-red-500">
+                <div className="flex gap-2 text-xs mb-3">
+                  <span className={`px-3 py-1 rounded-full ${p.type === 'REPLACE' ? 'bg-blue-500/20 text-blue-400' : 'bg-red-500/20 text-red-400'}`}>
+                    {p.type || 'PROXY'}
+                  </span>
+                  <span className="px-3 py-1 rounded-full input-bg">{p.class_room}</span>
+                </div>
+                <div className="flex gap-6 text-sm">
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-400">Assigned To</p>
+                    <p className="font-semibold">{p.proxy_teacher}</p>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-400">Original</p>
+                    <p className="line-through text-gray-400">{p.absent_teacher}</p>
+                  </div>
+                </div>
+                <p className="text-sm mt-3 border-t border-gray-700 pt-3">Subject: {p.subject}</p>
               </div>
-              <div className="flex gap-6 text-sm">
-                <div className="flex-1"><p className="text-xs" style={{color:'var(--muted)'}}>Assigned To</p><p className="font-semibold">{p.proxy_teacher}</p></div>
-                <div className="flex-1"><p className="text-xs" style={{color:'var(--muted)'}}>Original</p><p className="line-through" style={{color:'var(--muted)'}}>{p.absent_teacher}</p></div>
-              </div>
-              <p className="text-sm mt-3 border-t pt-3" style={{borderColor:'var(--border)'}}>Subject: {p.subject}</p>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       );
     }
 
-    // ==================== REPORT (simplified) ====================
-    function ReportTab({user}) {
-      const {data: medical, add: addMed, update: upMed} = useCollection('medical');
-      const {data: maint, add: addMaint, update: upMaint} = useCollection('maintenance');
+    // ==================== REPORT ====================
+    function ReportTab({ user }) {
+      const { data: medical, add: addMed } = useCollection('medical');
+      const { data: maint, add: addMaint } = useCollection('maintenance');
       const [type, setType] = useState('medical');
       const [show, setShow] = useState(false);
-      const [form, setForm] = useState({student_name:'', class_name:'', reg:'', room_number:'', description:'', issue_type:'', location:''});
-      const isTeacher = user.role==='TEACHER';
+      const [form, setForm] = useState({ student_name: '', class_name: '', reg: '', room_number: '', description: '', issue_type: '', location: '' });
+
+      const isTeacher = user.role === 'TEACHER';
+
       const submit = () => {
-        if (type==='medical') {
-          if (!form.student_name || !form.description) return alert('Required');
-          addMed({student_name:form.student_name, room:`Class: ${form.class_name||'N/A'} | Reg: ${form.reg||'N/A'} | Room: ${form.room_number||'N/A'}`, description:form.description, reported_by:user.name, status:'PENDING'});
+        if (type === 'medical') {
+          if (!form.student_name || !form.description) return alert('Student name and problem required');
+          addMed({
+            student_name: form.student_name,
+            room: `Class: ${form.class_name || 'N/A'} | Reg: ${form.reg || 'N/A'} | Room: ${form.room_number || 'N/A'}`,
+            description: form.description,
+            reported_by: user.name,
+            status: 'PENDING'
+          });
         } else {
-          if (!form.issue_type || !form.description) return alert('Required');
-          addMaint({type:form.issue_type, location:form.location||'N/A', description:form.description, reported_by:user.name, status:'PENDING'});
+          if (!form.issue_type || !form.description) return alert('Issue type and description required');
+          addMaint({
+            type: form.issue_type,
+            location: form.location || 'N/A',
+            description: form.description,
+            reported_by: user.name,
+            status: 'PENDING'
+          });
         }
-        setShow(false); setForm({student_name:'',class_name:'',reg:'',room_number:'',description:'',issue_type:'',location:''});
+        setShow(false);
+        setForm({ student_name: '', class_name: '', reg: '', room_number: '', description: '', issue_type: '', location: '' });
       };
-      const list = type==='medical' ? medical : maint;
+
+      const list = type === 'medical' ? medical : maint;
+
       return (
         <div className="space-y-5 max-w-3xl">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold">Report Issues</h2>
-            {isTeacher && <button onClick={()=>setShow(!show)} className="bg-red-500/15 text-red-400 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2"><IconPlus/> New</button>}
+            {isTeacher && (
+              <button onClick={() => setShow(!show)} className="bg-red-500/15 text-red-400 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2">
+                <IconPlus /> New
+              </button>
+            )}
           </div>
-          <div className="flex p-1 rounded-xl" style={{background:'var(--card)'}}>
-            <button onClick={()=>setType('medical')} className={`flex-1 py-2 rounded-lg text-sm ${type==='medical'?'bg-red-500/20 text-red-400':''}`}>Medical</button>
-            <button onClick={()=>setType('facility')} className={`flex-1 py-2 rounded-lg text-sm ${type==='facility'?'bg-red-500/20 text-red-400':''}`}>Facility</button>
+
+          <div className="flex p-1 rounded-xl card">
+            <button onClick={() => setType('medical')} className={`flex-1 py-2 rounded-lg text-sm ${type === 'medical' ? 'bg-red-500/20 text-red-400' : 'text-gray-400'}`}>Medical</button>
+            <button onClick={() => setType('facility')} className={`flex-1 py-2 rounded-lg text-sm ${type === 'facility' ? 'bg-red-500/20 text-red-400' : 'text-gray-400'}`}>Facility</button>
           </div>
+
           {show && isTeacher && (
             <div className="card p-5 space-y-3">
-              {type==='medical' ? (
+              {type === 'medical' ? (
                 <>
-                  <input placeholder="Student Name *" className="w-full p-3 rounded-xl" style={{background:'var(--input)'}} value={form.student_name} onChange={e=>setForm({...form,student_name:e.target.value})}/>
+                  <input placeholder="Student Name *" className="w-full p-3 rounded-xl input-bg" value={form.student_name} onChange={e => setForm({ ...form, student_name: e.target.value })} />
                   <div className="grid grid-cols-3 gap-3">
-                    <input placeholder="Class" className="p-3 rounded-xl" style={{background:'var(--input)'}} value={form.class_name} onChange={e=>setForm({...form,class_name:e.target.value})}/>
-                    <input placeholder="Reg" className="p-3 rounded-xl" style={{background:'var(--input)'}} value={form.reg} onChange={e=>setForm({...form,reg:e.target.value})}/>
-                    <input placeholder="Room" className="p-3 rounded-xl" style={{background:'var(--input)'}} value={form.room_number} onChange={e=>setForm({...form,room_number:e.target.value})}/>
+                    <input placeholder="Class" className="p-3 rounded-xl input-bg" value={form.class_name} onChange={e => setForm({ ...form, class_name: e.target.value })} />
+                    <input placeholder="Reg" className="p-3 rounded-xl input-bg" value={form.reg} onChange={e => setForm({ ...form, reg: e.target.value })} />
+                    <input placeholder="Room" className="p-3 rounded-xl input-bg" value={form.room_number} onChange={e => setForm({ ...form, room_number: e.target.value })} />
                   </div>
-                  <textarea placeholder="Problem *" className="w-full p-3 rounded-xl min-h-[100px]" style={{background:'var(--input)'}} value={form.description} onChange={e=>setForm({...form,description:e.target.value})}/>
+                  <textarea placeholder="Problem description *" className="w-full p-3 rounded-xl min-h-[100px] input-bg" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
                 </>
               ) : (
                 <>
-                  <input placeholder="Issue Type *" className="w-full p-3 rounded-xl" style={{background:'var(--input)'}} value={form.issue_type} onChange={e=>setForm({...form,issue_type:e.target.value})}/>
-                  <input placeholder="Location" className="w-full p-3 rounded-xl" style={{background:'var(--input)'}} value={form.location} onChange={e=>setForm({...form,location:e.target.value})}/>
-                  <textarea placeholder="Description *" className="w-full p-3 rounded-xl min-h-[100px]" style={{background:'var(--input)'}} value={form.description} onChange={e=>setForm({...form,description:e.target.value})}/>
+                  <input placeholder="Issue Type *" className="w-full p-3 rounded-xl input-bg" value={form.issue_type} onChange={e => setForm({ ...form, issue_type: e.target.value })} />
+                  <input placeholder="Location" className="w-full p-3 rounded-xl input-bg" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} />
+                  <textarea placeholder="Description *" className="w-full p-3 rounded-xl min-h-[100px] input-bg" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
                 </>
               )}
               <button onClick={submit} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-xl font-bold">Submit</button>
             </div>
           )}
+
           {list.map(item => (
-            <div key={item.id} className={`card p-5 border-l-4 ${item.status==='RESOLVED'?'border-green-500 opacity-70':'border-red-500'}`}>
+            <div key={item.id} className={`card p-5 border-l-4 ${item.status === 'RESOLVED' ? 'border-green-500 opacity-70' : 'border-red-500'}`}>
               <div className="flex justify-between mb-2">
-                <h4 className="font-bold">{type==='medical'?item.student_name:item.type}</h4>
-                <span className={`text-xs px-2 py-1 rounded-full ${item.status==='RESOLVED'?'bg-green-500/20 text-green-400':'bg-orange-500/20 text-orange-400'}`}>{item.status}</span>
+                <h4 className="font-bold">{type === 'medical' ? item.student_name : item.type}</h4>
+                <span className={`text-xs px-2 py-1 rounded-full ${item.status === 'RESOLVED' ? 'bg-green-500/20 text-green-400' : 'bg-orange-500/20 text-orange-400'}`}>
+                  {item.status}
+                </span>
               </div>
-              <p className="text-xs mb-2" style={{color:'var(--muted)'}}>{item.room||item.location}</p>
-              <p className="text-sm p-3 rounded-lg mb-2" style={{background:'var(--input)'}}>{item.description}</p>
-              <p className="text-xs text-right" style={{color:'var(--muted)'}}>By: {item.reported_by}</p>
+              <p className="text-xs text-gray-400 mb-2">{item.room || item.location}</p>
+              <p className="text-sm p-3 rounded-lg mb-2 input-bg">{item.description}</p>
+              <p className="text-xs text-gray-500 text-right">By: {item.reported_by}</p>
             </div>
           ))}
         </div>
       );
     }
 
-    // ==================== CHAT (with Broadcast, Voice, Read Receipt, Mention) ====================
-    function ChatTab({user}) {
-      const {data, add, update, remove, load} = useCollection('chat_messages');
-      const {data: allUsers} = useCollection('users');
+    // ==================== CHAT ====================
+    function ChatTab({ user }) {
+      const { data, add, update, remove } = useCollection('chat_messages');
+      const { data: allUsers } = useCollection('users');
       const [message, setMessage] = useState('');
       const [file, setFile] = useState(null);
       const [editId, setEditId] = useState(null);
       const [isBroadcast, setIsBroadcast] = useState(false);
       const [recording, setRecording] = useState(false);
-      const [mediaRecorder, setMediaRecorder] = useState(null);
       const [showMentions, setShowMentions] = useState(false);
       const [mentionFilter, setMentionFilter] = useState('');
       const bottomRef = useRef();
+      const mediaRecorderRef = useRef(null);
       const chunksRef = useRef([]);
 
-      useEffect(() => { bottomRef.current?.scrollIntoView({behavior:'smooth'}); }, [data]);
-
-      // Mark messages as read when chat opens
       useEffect(() => {
-        data.forEach(m => {
-          if (m.sender_name !== user.name) {
-            const readBy = m.read_by || [];
-            if (!readBy.includes(user.name)) {
-              update(m.id, { read_by: [...readBy, user.name] });
-            }
-          }
-        });
-      }, [data.length]);
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, [data]);
 
       const startRecording = async () => {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
           const recorder = new MediaRecorder(stream);
           chunksRef.current = [];
-          recorder.ondataavailable = e => chunksRef.current.push(e.data);
+          recorder.ondataavailable = (e) => chunksRef.current.push(e.data);
           recorder.onstop = async () => {
             const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
             const audioFile = new File([blob], 'voice.webm', { type: 'audio/webm' });
@@ -672,25 +1138,24 @@
                 message: '',
                 file_url: url,
                 is_voice: true,
-                is_broadcast: isBroadcast,
-                read_by: [user.name]
+                is_broadcast: isBroadcast
               });
             }
             stream.getTracks().forEach(t => t.stop());
           };
           recorder.start();
-          setMediaRecorder(recorder);
+          mediaRecorderRef.current = recorder;
           setRecording(true);
-        } catch (e) {
-          alert('Microphone permission needed');
+        } catch (err) {
+          alert('Microphone permission is required');
         }
       };
 
       const stopRecording = () => {
-        if (mediaRecorder) {
-          mediaRecorder.stop();
+        if (mediaRecorderRef.current) {
+          mediaRecorderRef.current.stop();
           setRecording(false);
-          setMediaRecorder(null);
+          mediaRecorderRef.current = null;
         }
       };
 
@@ -702,7 +1167,7 @@
           if (!file_url) return;
         }
         if (editId) {
-          update(editId, { message: message.trim(), ...(file_url && {file_url}) });
+          update(editId, { message: message.trim(), ...(file_url && { file_url }) });
           setEditId(null);
         } else {
           add({
@@ -710,8 +1175,7 @@
             sender_role: user.role,
             message: message.trim(),
             file_url,
-            is_broadcast: isBroadcast,
-            read_by: [user.name]
+            is_broadcast: isBroadcast
           });
         }
         setMessage('');
@@ -721,9 +1185,9 @@
 
       const handleInput = (val) => {
         setMessage(val);
-        const lastWord = val.split(' ').pop();
-        if (lastWord.startsWith('@')) {
-          setMentionFilter(lastWord.slice(1).toLowerCase());
+        const last = val.split(' ').pop();
+        if (last.startsWith('@')) {
+          setMentionFilter(last.slice(1).toLowerCase());
           setShowMentions(true);
         } else {
           setShowMentions(false);
@@ -737,16 +1201,9 @@
         setShowMentions(false);
       };
 
-      const isImage = url => url && /\.(jpeg|jpg|png|gif|webp)$/i.test(url);
-      const isPdf = url => url && /\.pdf$/i.test(url);
-      const isVoice = (m) => m.is_voice || (m.file_url && m.file_url.includes('.webm'));
-
-      const getReceipt = (m) => {
-        if (m.sender_name !== user.name) return null;
-        const readBy = m.read_by || [];
-        if (readBy.length > 1) return <span className="text-blue-400 text-xs ml-1">✓✓</span>;
-        return <span className="text-gray-400 text-xs ml-1">✓</span>;
-      };
+      const isImage = (url) => url && /\.(jpeg|jpg|png|gif|webp)$/i.test(url);
+      const isPdf = (url) => url && /\.pdf$/i.test(url);
+      const isVoice = (m) => m.is_voice || (m.file_url && m.file_url.includes('webm'));
 
       return (
         <div className="space-y-4 max-w-3xl">
@@ -754,29 +1211,34 @@
 
           <div className="card p-4 chat-box space-y-3">
             {data.slice().reverse().map(m => {
-              const canEdit = user.role==='ADMIN' || m.sender_name===user.name;
+              const canEdit = user.role === 'ADMIN' || m.sender_name === user.name;
               return (
-                <div key={m.id} className={`flex ${m.sender_name===user.name?'justify-end':'justify-start'}`}>
-                  <div className={`max-w-[80%] rounded-2xl px-4 py-2 relative ${m.is_broadcast ? 'broadcast-badge text-white' : (m.sender_name===user.name ? 'bg-red-500/20' : '')}`} style={!m.is_broadcast && m.sender_name!==user.name ? {background:'var(--input)'} : {}}>
-                    {m.is_broadcast && <div className="text-xs font-bold mb-1 opacity-90">📢 OFFICIAL BROADCAST</div>}
+                <div key={m.id} className={`flex ${m.sender_name === user.name ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${m.is_broadcast ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white' : (m.sender_name === user.name ? 'bg-red-500/20' : 'input-bg')}`}>
+                    {m.is_broadcast && <div className="text-xs font-bold mb-1">📢 OFFICIAL BROADCAST</div>}
                     <div className="flex justify-between gap-3 mb-1">
-                      <span className={`text-xs font-medium ${m.is_broadcast?'text-white':'text-red-400'}`}>{m.sender_name} · {m.sender_role}</span>
-                      <div className="flex gap-2 items-center">
-                        {getReceipt(m)}
-                        {canEdit && <button onClick={()=>{setEditId(m.id); setMessage(m.message||'');}} className="text-xs opacity-70">Edit</button>}
-                        {user.role==='ADMIN' && <button onClick={()=>confirm('Delete?')&&remove(m.id)} className="text-xs opacity-70">Delete</button>}
+                      <span className={`text-xs font-medium ${m.is_broadcast ? 'text-white' : 'text-red-400'}`}>
+                        {m.sender_name} · {m.sender_role}
+                      </span>
+                      <div className="flex gap-2">
+                        {canEdit && <button onClick={() => { setEditId(m.id); setMessage(m.message || ''); }} className="text-xs opacity-70">Edit</button>}
+                        {user.role === 'ADMIN' && <button onClick={() => confirm('Delete?') && remove(m.id)} className="text-xs opacity-70">Delete</button>}
                       </div>
                     </div>
                     {m.message && <p className="text-sm">{linkifyAndMention(m.message)}</p>}
                     {isVoice(m) && m.file_url && (
-                      <audio controls src={m.file_url} className="mt-2 w-full max-w-xs" style={{height:36}}/>
+                      <audio controls src={m.file_url} className="mt-2 w-full max-w-xs" style={{ height: 36 }} />
                     )}
                     {m.file_url && isImage(m.file_url) && (
-                      <img src={m.file_url} className="mt-2 rounded-xl max-h-60 object-cover cursor-pointer" onClick={()=>window.open(m.file_url)}/>
+                      <img src={m.file_url} className="mt-2 rounded-xl max-h-60 object-cover cursor-pointer" onClick={() => window.open(m.file_url)} />
                     )}
                     {m.file_url && isPdf(m.file_url) && (
-                      <a href={m.file_url} target="_blank" className="mt-2 flex items-center gap-2 p-3 rounded-xl" style={{background:'rgba(0,0,0,0.2)'}}>
-                        <span>📄</span><div><p className="text-sm font-medium">PDF Document</p><p className="text-xs opacity-70">Tap to open</p></div>
+                      <a href={m.file_url} target="_blank" className="mt-2 flex items-center gap-2 p-3 rounded-xl" style={{ background: 'rgba(0,0,0,0.2)' }}>
+                        <span>📄</span>
+                        <div>
+                          <p className="text-sm font-medium">PDF Document</p>
+                          <p className="text-xs opacity-70">Tap to open</p>
+                        </div>
                       </a>
                     )}
                   </div>
@@ -786,33 +1248,50 @@
             <div ref={bottomRef}></div>
           </div>
 
-          {/* Mention suggestions */}
           {showMentions && (
             <div className="card p-2 max-h-40 overflow-y-auto">
-              {allUsers.filter(u => u.full_name.toLowerCase().includes(mentionFilter)).slice(0,6).map(u => (
-                <button key={u.id} onClick={()=>insertMention(u.full_name.split(' ')[0])} className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-red-500/10">
-                  @{u.full_name}
-                </button>
-              ))}
+              {allUsers
+                .filter(u => u.full_name.toLowerCase().includes(mentionFilter))
+                .slice(0, 6)
+                .map(u => (
+                  <button
+                    key={u.id}
+                    onClick={() => insertMention(u.full_name.split(' ')[0])}
+                    className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-red-500/10"
+                  >
+                    @{u.full_name}
+                  </button>
+                ))}
             </div>
           )}
 
           <div className="card p-3 space-y-2">
             {editId && <p className="text-xs text-yellow-400">Editing message...</p>}
-            {user.role==='ADMIN' && (
+            {user.role === 'ADMIN' && (
               <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={isBroadcast} onChange={e=>setIsBroadcast(e.target.checked)}/>
+                <input type="checkbox" checked={isBroadcast} onChange={e => setIsBroadcast(e.target.checked)} />
                 <span>📢 Send as Official Broadcast</span>
               </label>
             )}
             <div className="flex gap-2 items-center">
-              <input value={message} onChange={e=>handleInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} placeholder="Type a message... (@ to mention)" className="flex-1 p-3 rounded-xl" style={{background:'var(--input)'}}/>
-              <button onClick={recording ? stopRecording : startRecording} className={`p-3 rounded-xl ${recording?'bg-red-500 text-white':'bg-gray-600 text-white'}`}>
-                <IconMic/>
+              <input
+                value={message}
+                onChange={e => handleInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && send()}
+                placeholder="Type a message... (@ to mention)"
+                className="flex-1 p-3 rounded-xl input-bg"
+              />
+              <button
+                onClick={recording ? stopRecording : startRecording}
+                className={`p-3 rounded-xl ${recording ? 'bg-red-500 text-white' : 'bg-gray-600 text-white'}`}
+              >
+                <IconMic />
               </button>
-              <button onClick={send} className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-5 rounded-xl font-semibold">{editId?'Update':'Send'}</button>
+              <button onClick={send} className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-5 rounded-xl font-semibold">
+                {editId ? 'Update' : 'Send'}
+              </button>
             </div>
-            <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e=>setFile(e.target.files[0])} className="text-sm"/>
+            <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e => setFile(e.target.files[0])} className="text-sm" />
             {recording && <p className="text-xs text-red-400 animate-pulse">Recording... Tap mic again to stop</p>}
           </div>
         </div>
@@ -820,40 +1299,54 @@
     }
 
     // ==================== RESULTS ====================
-    function ResultsTab({user}) {
-      const {data, add, update, remove} = useCollection('exam_results');
+    function ResultsTab({ user }) {
+      const { data, add, update, remove } = useCollection('exam_results');
       const [show, setShow] = useState(false);
       const [title, setTitle] = useState('');
       const [desc, setDesc] = useState('');
       const [file, setFile] = useState(null);
-      const isAdmin = user.role==='ADMIN';
+      const isAdmin = user.role === 'ADMIN';
+
       const save = async () => {
         if (!title) return alert('Title required');
-        let file_url = file ? await uploadFile(file) : null;
-        if (file && !file_url) return;
-        add({title, description:desc, file_url, uploaded_by:user.name});
-        setShow(false); setTitle(''); setDesc(''); setFile(null);
+        let file_url = null;
+        if (file) {
+          file_url = await uploadFile(file);
+          if (!file_url) return;
+        }
+        add({ title, description: desc, file_url, uploaded_by: user.name });
+        setShow(false);
+        setTitle('');
+        setDesc('');
+        setFile(null);
       };
+
       return (
         <div className="space-y-5 max-w-3xl">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold">Exam Results</h2>
-            {isAdmin && <button onClick={()=>setShow(!show)} className="bg-red-500/15 text-red-400 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2"><IconPlus/> Upload</button>}
+            {isAdmin && (
+              <button onClick={() => setShow(!show)} className="bg-red-500/15 text-red-400 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2">
+                <IconPlus /> Upload
+              </button>
+            )}
           </div>
+
           {show && isAdmin && (
             <div className="card p-5 space-y-3">
-              <input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Title" className="w-full p-3 rounded-xl" style={{background:'var(--input)'}}/>
-              <textarea value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Description" className="w-full p-3 rounded-xl min-h-[80px]" style={{background:'var(--input)'}}/>
-              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e=>setFile(e.target.files[0])} className="text-sm"/>
+              <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" className="w-full p-3 rounded-xl input-bg" />
+              <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="Description" className="w-full p-3 rounded-xl min-h-[80px] input-bg" />
+              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e => setFile(e.target.files[0])} className="text-sm" />
               <button onClick={save} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-xl font-bold">Upload</button>
             </div>
           )}
+
           {data.map(r => (
             <div key={r.id} className="card p-5 border-l-4 border-blue-500">
               <h3 className="font-bold text-lg">{r.title}</h3>
-              <p className="text-xs" style={{color:'var(--muted)'}}>By {r.uploaded_by}</p>
+              <p className="text-xs text-gray-400">By {r.uploaded_by}</p>
               {r.description && <p className="text-sm mt-2">{linkifyAndMention(r.description)}</p>}
-              {r.file_url && <a href={r.file_url} target="_blank" className="text-blue-400 text-sm flex items-center gap-1 mt-2"><IconFile/> View File</a>}
+              {r.file_url && <a href={r.file_url} target="_blank" className="text-blue-400 text-sm flex items-center gap-1 mt-2"><IconFile /> View File</a>}
             </div>
           ))}
         </div>
@@ -861,11 +1354,12 @@
     }
 
     // ==================== PROFILE ====================
-    function Profile({user, setUser, setTab, onFullLogout, theme, setTheme}) {
+    function Profile({ user, setUser, setTab, onFullLogout, theme, setTheme }) {
       const [showEdit, setShowEdit] = useState(false);
       const [newId, setNewId] = useState(user.id);
       const [newPass, setNewPass] = useState('');
       const [confirmPass, setConfirmPass] = useState('');
+
       const save = async () => {
         if (!newId.trim()) return alert('Login ID required');
         const updates = {};
@@ -875,41 +1369,66 @@
           if (newPass !== confirmPass) return alert('Passwords do not match');
           updates.password = newPass.trim();
         }
-        if (Object.keys(updates).length === 0) { setShowEdit(false); return; }
-        const {error} = await supabase.from('users').update(updates).eq('username', user.id);
+        if (Object.keys(updates).length === 0) {
+          setShowEdit(false);
+          return;
+        }
+        const { error } = await supabase.from('users').update(updates).eq('username', user.id);
         if (error) alert(error.message);
         else {
           alert('Updated!');
-          setUser({...user, id: updates.username || user.id});
-          setShowEdit(false); setNewPass(''); setConfirmPass('');
+          setUser({ ...user, id: updates.username || user.id });
+          setShowEdit(false);
+          setNewPass('');
+          setConfirmPass('');
         }
       };
+
       return (
         <div className="space-y-5 max-w-lg">
           <h2 className="text-2xl font-bold">My Profile</h2>
           <div className="card p-6 space-y-5">
-            <div><p className="text-xs" style={{color:'var(--muted)'}}>Full Name</p><p className="font-medium text-lg">{user.name}</p></div>
-            <div><p className="text-xs" style={{color:'var(--muted)'}}>Role</p><p className="font-medium">{user.role}</p></div>
-            <div><p className="text-xs" style={{color:'var(--muted)'}}>Login ID</p><p className="font-medium text-red-400 text-lg">{user.id}</p></div>
-            <div className="pt-4 border-t space-y-3" style={{borderColor:'var(--border)'}}>
-              <button onClick={() => setTheme(theme==='dark'?'light':'dark')} className="w-full py-3 rounded-xl text-sm flex items-center justify-center gap-2" style={{background:'var(--input)'}}>
-                {theme==='dark' ? <><IconSun/> Switch to Light Mode</> : <><IconMoon/> Switch to Dark Mode</>}
+            <div>
+              <p className="text-xs text-gray-400">Full Name</p>
+              <p className="font-medium text-lg">{user.name}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400">Role</p>
+              <p className="font-medium">{user.role}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400">Login ID</p>
+              <p className="font-medium text-red-400 text-lg">{user.id}</p>
+            </div>
+
+            <div className="pt-4 border-t border-gray-700 space-y-3">
+              <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="w-full py-3 rounded-xl text-sm flex items-center justify-center gap-2 input-bg">
+                {theme === 'dark' ? <><IconSun /> Switch to Light Mode</> : <><IconMoon /> Switch to Dark Mode</>}
               </button>
+
               {!showEdit ? (
-                <button onClick={()=>setShowEdit(true)} className="w-full py-3 rounded-xl text-sm" style={{background:'var(--input)'}}>Change Login ID / Password</button>
+                <button onClick={() => setShowEdit(true)} className="w-full py-3 rounded-xl text-sm input-bg">Change Login ID / Password</button>
               ) : (
                 <div className="space-y-3">
-                  <input value={newId} onChange={e=>setNewId(e.target.value)} className="w-full p-3 rounded-xl" style={{background:'var(--input)'}}/>
-                  <input type="password" value={newPass} onChange={e=>setNewPass(e.target.value)} placeholder="New Password (optional)" className="w-full p-3 rounded-xl" style={{background:'var(--input)'}}/>
-                  {newPass && <input type="password" value={confirmPass} onChange={e=>setConfirmPass(e.target.value)} placeholder="Confirm" className="w-full p-3 rounded-xl" style={{background:'var(--input)'}}/>}
+                  <input value={newId} onChange={e => setNewId(e.target.value)} className="w-full p-3 rounded-xl input-bg" />
+                  <input type="password" value={newPass} onChange={e => setNewPass(e.target.value)} placeholder="New Password (optional)" className="w-full p-3 rounded-xl input-bg" />
+                  {newPass && <input type="password" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} placeholder="Confirm" className="w-full p-3 rounded-xl input-bg" />}
                   <div className="flex gap-3">
                     <button onClick={save} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-xl font-semibold">Save</button>
-                    <button onClick={()=>setShowEdit(false)} className="px-5 rounded-xl" style={{background:'var(--input)'}}>Cancel</button>
+                    <button onClick={() => setShowEdit(false)} className="px-5 rounded-xl input-bg">Cancel</button>
                   </div>
                 </div>
               )}
-              {user.role==='ADMIN' && <button onClick={()=>setTab('users')} className="w-full bg-red-500/15 text-red-400 py-3 rounded-xl text-sm flex items-center justify-center gap-2"><IconUsers/> Manage Users</button>}
-              <button onClick={onFullLogout} className="w-full bg-red-500/10 text-red-400 py-3 rounded-xl text-sm">Logout Completely (Clear PIN)</button>
+
+              {user.role === 'ADMIN' && (
+                <button onClick={() => setTab('users')} className="w-full bg-red-500/15 text-red-400 py-3 rounded-xl text-sm flex items-center justify-center gap-2">
+                  <IconUsers /> Manage Users
+                </button>
+              )}
+
+              <button onClick={onFullLogout} className="w-full bg-red-500/10 text-red-400 py-3 rounded-xl text-sm">
+                Logout Completely (Clear PIN)
+              </button>
             </div>
           </div>
         </div>
@@ -918,31 +1437,58 @@
 
     // ==================== USERS ====================
     function Users() {
-      const {data, add, remove} = useCollection('users');
+      const { data, add, remove } = useCollection('users');
       const [show, setShow] = useState(false);
-      const [form, setForm] = useState({username:'', password:'', full_name:'', role:'TEACHER'});
+      const [form, setForm] = useState({ username: '', password: '', full_name: '', role: 'TEACHER' });
+
       return (
         <div className="space-y-5 max-w-3xl">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold">Manage Users</h2>
-            <button onClick={()=>setShow(!show)} className="bg-red-500/15 text-red-400 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2"><IconPlus/> Create</button>
+            <button onClick={() => setShow(!show)} className="bg-red-500/15 text-red-400 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2">
+              <IconPlus /> Create
+            </button>
           </div>
+
           {show && (
             <div className="card p-5 space-y-3">
-              <input placeholder="Full Name" className="w-full p-3 rounded-xl" style={{background:'var(--input)'}} value={form.full_name} onChange={e=>setForm({...form,full_name:e.target.value})}/>
-              <input placeholder="Login ID" className="w-full p-3 rounded-xl" style={{background:'var(--input)'}} value={form.username} onChange={e=>setForm({...form,username:e.target.value})}/>
-              <input placeholder="Temporary Password" className="w-full p-3 rounded-xl" style={{background:'var(--input)'}} value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/>
-              <select className="w-full p-3 rounded-xl" style={{background:'var(--input)'}} value={form.role} onChange={e=>setForm({...form,role:e.target.value})}>
-                <option value="TEACHER">Teacher</option><option value="DOCTOR">Doctor</option><option value="MAINTENANCE">Maintenance</option><option value="ADMIN">Admin</option>
+              <input placeholder="Full Name" className="w-full p-3 rounded-xl input-bg" value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} />
+              <input placeholder="Login ID" className="w-full p-3 rounded-xl input-bg" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} />
+              <input placeholder="Temporary Password" className="w-full p-3 rounded-xl input-bg" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
+              <select className="w-full p-3 rounded-xl input-bg" value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
+                <option value="TEACHER">Teacher</option>
+                <option value="DOCTOR">Doctor</option>
+                <option value="MAINTENANCE">Maintenance</option>
+                <option value="ADMIN">Admin</option>
               </select>
-              <button onClick={()=>{if(form.username&&form.password&&form.full_name){add(form); setShow(false); setForm({username:'',password:'',full_name:'',role:'TEACHER'}); alert('Created!');} else alert('Fill all');}} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-xl font-bold">Create Login ID</button>
+              <button
+                onClick={() => {
+                  if (form.username && form.password && form.full_name) {
+                    add(form);
+                    setShow(false);
+                    setForm({ username: '', password: '', full_name: '', role: 'TEACHER' });
+                    alert('Created!');
+                  } else {
+                    alert('Fill all fields');
+                  }
+                }}
+                className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-xl font-bold"
+              >
+                Create Login ID
+              </button>
             </div>
           )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {data.map(u => (
               <div key={u.id} className="card p-4 flex justify-between items-center">
-                <div><p className="font-medium">{u.full_name}</p><p className="text-xs" style={{color:'var(--muted)'}}>{u.role}</p></div>
-                <button onClick={()=>confirm(`Delete ${u.full_name}?`)&&remove(u.id)} className="text-red-400 p-2"><IconTrash/></button>
+                <div>
+                  <p className="font-medium">{u.full_name}</p>
+                  <p className="text-xs text-gray-400">{u.role}</p>
+                </div>
+                <button onClick={() => confirm(`Delete ${u.full_name}?`) && remove(u.id)} className="text-red-400 p-2">
+                  <IconTrash />
+                </button>
               </div>
             ))}
           </div>
@@ -950,7 +1496,7 @@
       );
     }
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
 </body>
 </html>
