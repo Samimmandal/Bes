@@ -82,164 +82,6 @@
       });
     }
 
-    // ========== APP ==========
-    function App() {
-      const [user, setUser] = useState(null);
-      const [tab, setTab] = useState('home');
-      const [mode, setMode] = useState('loading');
-      const [theme, setTheme] = useState(localStorage.getItem('bes_theme') || 'dark');
-
-      useEffect(() => {
-        document.body.className = theme === 'light' ? 'light' : '';
-        localStorage.setItem('bes_theme', theme);
-      }, [theme]);
-
-      useEffect(() => {
-        try {
-          const saved = localStorage.getItem('bes_pin_user');
-          if (saved) {
-            const p = JSON.parse(saved);
-            if (p && p.pin) { setMode('pin'); return; }
-          }
-        } catch (e) {}
-        setMode('login');
-      }, []);
-
-      const login = async (username, password) => {
-        const { data, error } = await supabase.from('users').select('*').eq('username', username.trim()).eq('password', password.trim()).maybeSingle();
-        if (error) return alert(error.message);
-        if (!data) return alert('Invalid Login ID or Password');
-        const u = { id: data.username, name: data.full_name, role: data.role };
-        setUser(u);
-        const saved = localStorage.getItem('bes_pin_user');
-        if (saved) {
-          try {
-            const p = JSON.parse(saved);
-            if (p.username === data.username && p.pin) { setMode('app'); return; }
-          } catch (e) {}
-        }
-        setMode('setpin');
-      };
-
-      const pinSuccess = (u) => { setUser(u); setMode('app'); };
-      const setPin = (pin) => {
-        localStorage.setItem('bes_pin_user', JSON.stringify({ username: user.id, name: user.name, role: user.role, pin }));
-        setMode('app');
-      };
-      const logout = () => { setUser(null); setTab('home'); setMode('pin'); };
-      const fullLogout = () => { localStorage.removeItem('bes_pin_user'); setUser(null); setTab('home'); setMode('login'); };
-
-      if (mode === 'loading') return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading...</div>;
-      if (mode === 'pin') return <PinScreen onSuccess={pinSuccess} onUsePassword={() => setMode('login')} onFullLogout={fullLogout} theme={theme} setTheme={setTheme} />;
-      if (mode === 'login') return <LoginScreen onLogin={login} theme={theme} setTheme={setTheme} />;
-      if (mode === 'setpin') return <SetPinScreen onSave={setPin} onSkip={() => setMode('app')} />;
-
-      return (
-        <div className="min-h-screen flex flex-col md:flex-row">
-          <aside className="hidden md:flex flex-col w-64 border-r p-4 sticky top-0 h-screen" style={{ background: theme === 'light' ? '#fff' : '#141416', borderColor: theme === 'light' ? '#e5e5ea' : '#2c2c2e' }}>
-            <div className="mb-6">
-              <h1 className="text-lg font-bold">Bes An Noorআমি বুঝতে পারছি তুমি খুব বিরক্ত। আমি এখন **একদম পরিষ্কার এবং ছোট করে** কোড দিচ্ছি, যাতে কালো পেজ না আসে।
-
-এই কোডে আছে:
-- Quick PIN Login
-- Dark / Light Mode
-- Broadcast
-- Voice Note
-- Mention (@name)
-- সব পুরনো ফিচার (Attendance, Notices, Proxy, Chat, Report, Results, Profile, Users)
-
-**এখন যা করবে:**
-
-1. GitHub-এ গিয়ে `index.html` খোলো
-2. **সব পুরনো কোড সিলেক্ট করে ডিলিট করো**
-3. নিচের কোড **পুরোটা** কপি করে পেস্ট করো
-4. Commit changes করো
-5. Incognito মোডে ওয়েবসাইট খোলো
-
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bes An Noor Model School</title>
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0b0b0e">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-jse; color: #fff; margin: 0; font-family: system-ui, sans-serif; }
-    body.light { background: #f2f2f7; color: #1c1c1e; }
-    .card { background: #1c1c1e; border-radius: 16px; }
-    body.light .card { background: #fff; }
-    .input-bg { background: #2c2c2e; }
-    body.light .input-bg { background: #e5e5ea; color: #1c1c1e; }
-    .header { background: rgba(11,11,14,0.95); border-bottom: 1px solid #2c2c2e; }
-    body.light .header { background: rgba(242,242,247,0.95); border-bottom: 1px solid #e5e5ea; }
-    .bottom-nav { background: rgba(20,20,23,0.95); border-top: 1px solid #2c2c2e; }
-    body.light .bottom-nav { background: rgba(242,242,247,0.95); border-top: 1px solid #e5e5ea; }
-    .pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #555; display: inline-block; }
-    .pin-dot.filled { background: #ef4444; border-color: #ef4444; }
-    .mention { color: #3b82f6; font-weight: 600; }
-    .chat-box { max-height: 50vh; overflow-y: auto; }
-  </style>
-</head>
-<body>
-  <div id="root"></div>
-  <script type="text/babel">
-    const { useState, useEffect, useCallback, useRef } = React;
-
-    const SUPABASE_URL = 'https://peiybuhnozgqatdyrdhf.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlaXlidWhub3pncWF0ZHlyZGhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzIyNDEsImV4cCI6MjEwMjU0ODI0MX0.a_1otAvBMRa20HSA01jcvtCbxwUpXNbmCzVmA9Qm-DE';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    function useCollection(table) {
-      const [data, setData] = useState([]);
-      const load = useCallback(async () => {
-        const { data: rows } = await supabase.from(table).select('*').order('created_at', { ascending: false });
-        setData(rows || []);
-      }, [table]);
-      useEffect(() => {
-        load();
-        const ch = supabase.channel(table).on('postgres_changes', { event: '*', schema: 'public', table }, load).subscribe();
-        return () => supabase.removeChannel(ch);
-      }, [table, load]);
-      const add = async (row) => {
-        const { error } = await supabase.from(table).insert([row]);
-        if (error) alert(error.message); else load();
-      };
-      const update = async (id, changes) => {
-        const { error } = await supabase.from(table).update(changes).eq('id', id);
-        if (error) alert(error.message); else load();
-      };
-      const remove = async (id) => {
-        const { error } = await supabase.from(table).delete().eq('id', id);
-        if (error) alert(error.message); else load();
-      };
-      return { data, add, update, remove };
-    }
-
-    async function uploadFile(file) {
-      if (!file) return null;
-      const ext = file.name ? file.name.split('.').pop() : 'webm';
-      const name = Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.' + ext;
-      const { error } = await supabase.storage.from('school-files').upload(name, file);
-      if (error) { alert('Upload failed: ' + error.message); return null; }
-      const { data } = supabase.storage.from('school-files').getPublicUrl(name);
-      return data.publicUrl;
-    }
-
-    function linkify(text) {
-      if (!text) return text;
-      return text.split(/(@\w+|https?:\/\/[^\s]+)/g).map((part, i) => {
-        if (part.startsWith('@')) return <span key={i} className="mention">{part}</span>;
-        if (part.startsWith('http')) return <a key={i} href={part} target="_blank">{part}</a>;
-        return part;
-      });
-    }
-
-    // ========== APP ==========
     function App() {
       const [user, setUser] = useState(null);
       const [tab, setTab] = useState('home');
@@ -341,7 +183,6 @@
       );
     }
 
-    // ========== PIN ==========
     function PinScreen({ onSuccess, onUsePassword, onFullLogout, theme, setTheme }) {
       const [pin, setPin] = useState('');
       const [error, setError] = useState('');
@@ -462,7 +303,6 @@
       );
     }
 
-    // ========== HOME ==========
     function Home({ user, setTab }) {
       const { data: attendance, add, update } = useCollection('attendance');
       const today = new Date().toISOString().split('T')[0];
@@ -544,9 +384,8 @@
       );
     }
 
-    // ========== NOTICES ==========
     function Notices({ user }) {
-      const { data, add, update, remove } = useCollection('notices');
+      const { data, add, remove } = useCollection('notices');
       const [show, setShow] = useState(false);
       const [title, setTitle] = useState('');
       const [content, setContent] = useState('');
@@ -586,7 +425,6 @@
       );
     }
 
-    // ========== SCHEDULE ==========
     function ScheduleTab({ user }) {
       const { data, add } = useCollection('proxies');
       const today = new Date().toISOString().split('T')[0];
@@ -637,7 +475,6 @@
       );
     }
 
-    // ========== REPORT ==========
     function ReportTab({ user }) {
       const { data: medical, add: addMed } = useCollection('medical');
       const { data: maint, add: addMaint } = useCollection('maintenance');
@@ -701,11 +538,538 @@
           ))}
         </div>
       );
+=1.0" />
+  <title>Bes An Noor Model School (Boys' Unit)</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0b0b0e">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { background: #0b0b0e; color: #fff; margin: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body.light { background: #f2f2f7; color: #1c1c1e; }
+    .card { background: #1c1c1e; border-radius: 16px; }
+    body.light .card { background: #ffffff; }
+    .input-bg { background: #2c2c2e; }
+    body.light .input-bg { background: #e5e5ea; color: #1c1c1e; }
+    .header { background: rgba(11,11,14,0.95); border-bottom: 1px solid #2c2c2e; }
+    body.light .header { background: rgba(242,242,247,0.95); border-bottom: 1px solid #e5e5ea; }
+    .bottom-nav { background: rgba(20,20,23,0.95); border-top: 1px solid #2c2c2e; }
+    body.light .bottom-nav { background: rgba(242,242,247,0.95); border-top: 1px solid #e5e5ea; }
+    .pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #555; display: inline-block; }
+    .pin-dot.filled { background: #ef4444; border-color: #ef4444; }
+    .mention { color: #3b82f6; font-weight: 600; }
+    .chat-box { max-height: 48vh; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useCallback, useRef } = React;
+
+    const SUPABASE_URL = 'https://peiybuhnozgqatdyrdhf.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlaXlidWhub3pncWF0ZHlyZGhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzIyNDEsImV4cCI6MjEwMjU0ODI0MX0.a_1otAvBMRa20HSA01jcvtCbxwUpXNbmCzVmA9Qm-DE';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    function useCollection(table) {
+      const [data, setData] = useState([]);
+      const load = useCallback(async () => {
+        const { data: rows } = await supabase.from(table).select('*').order('created_at', { ascending: false });
+        setData(rows || []);
+      }, [table]);
+      useEffect(() => {
+        load();
+        const ch = supabase.channel(table).on('postgres_changes', { event: '*', schema: 'public', table }, load).subscribe();
+        return () => supabase.removeChannel(ch);
+      }, [table, load]);
+      const add = async (row) => {
+        const { error } = await supabase.from(table).insert([row]);
+        if (error) alert(error.message); else load();
+      };
+      const update = async (id, changes) => {
+        const { error } = await supabase.from(table).update(changes).eq('id', id);
+        if (error) alert(error.message); else load();
+      };
+      const remove = async (id) => {
+        const { error } = await supabase.from(table).delete().eq('id', id);
+        if (error) alert(error.message); else load();
+      };
+      return { data, add, update, remove };
     }
 
-    // ========== CHAT ==========
+    async function uploadFile(file) {
+      if (!file) return null;
+      const ext = file.name ? file.name.split('.').pop() : 'webm';
+      const name = Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.' + ext;
+      const { error } = await supabase.storage.from('school-files').upload(name, file);
+      if (error) { alert('Upload failed: ' + error.message); return null; }
+      const { data } = supabase.storage.from('school-files').getPublicUrl(name);
+      return data.publicUrl;
+    }
+
+    function linkify(text) {
+      if (!text) return text;
+      return text.split(/(@\w+|https?:\/\/[^\s]+)/g).map((part, i) => {
+        if (part.startsWith('@')) return <span key={i} className="mention">{part}</span>;
+        if (part.startsWith('http')) return <a key={i} href={part} target="_blank" className="underline text-blue-400">{part}</a>;
+        return part;
+      });
+    }
+
+    // ==================== APP ====================
+    function App() {
+      const [user, setUser] = useState(null);
+      const [tab, setTab] = useState('home');
+      const [mode, setMode] = useState('loading');
+      const [theme, setTheme] = useState(localStorage.getItem('bes_theme') || 'dark');
+
+      useEffect(() => {
+        document.body.className = theme === 'light' ? 'light' : '';
+        localStorage.setItem('bes_theme', theme);
+      }, [theme]);
+
+      useEffect(() => {
+        try {
+          const saved = localStorage.getItem('bes_pin_user');
+          if (saved) {
+            const p = JSON.parse(saved);
+            if (p && p.pin) { setMode('pin'); return; }
+          }
+        } catch (e) {}
+        setMode('login');
+      }, []);
+
+      const login = async (username, password) => {
+        const { data, error } = await supabase.from('users').select('*').eq('username', username.trim()).eq('password', password.trim()).maybeSingle();
+        if (error) return alert(error.message);
+        if (!data) return alert('Invalid Login ID or Password');
+        const u = { id: data.username, name: data.full_name, role: data.role };
+        setUser(u);
+        try {
+          const saved = localStorage.getItem('bes_pin_user');
+          if (saved) {
+            const p = JSON.parse(saved);
+            if (p.username === data.username && p.pin) { setMode('app'); return; }
+          }
+        } catch (e) {}
+        setMode('setpin');
+      };
+
+      const pinSuccess = (u) => { setUser(u); setMode('app'); };
+      const savePin = (pin) => {
+        localStorage.setItem('bes_pin_user', JSON.stringify({ username: user.id, name: user.name, role: user.role, pin }));
+        setMode('app');
+      };
+      const logout = () => { setUser(null); setTab('home'); setMode('pin'); };
+      const fullLogout = () => { localStorage.removeItem('bes_pin_user'); setUser(null); setTab('home'); setMode('login'); };
+
+      if (mode === 'loading') return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading...</div>;
+      if (mode === 'pin') return <PinScreen onSuccess={pinSuccess} onUsePassword={() => setMode('login')} onFullLogout={fullLogout} theme={theme} setTheme={setTheme} />;
+      if (mode === 'login') return <LoginScreen onLogin={login} theme={theme} setTheme={setTheme} />;
+      if (mode === 'setpin') return <SetPinScreen onSave={savePin} onSkip={() => setMode('app')} />;
+
+      return (
+        <div className="min-h-screen flex flex-col">
+          <header className="header px-4 py-3 flex justify-between items-center sticky top-0 z-20">
+            <div>
+              <h1 className="text-base font-bold">Bes An Noor Model School</h1>
+              <p className="text-xs text-gray-400">{user.name} · {user.role}</p>
+            </div>
+            <button onClick={logout} className="text-sm px-3 py-1 rounded-full input-bg">Logout</button>
+          </header>
+
+          <main className="flex-1 overflow-y-auto px-4 pb-24 pt-4">
+            {tab === 'home' && <Home user={user} setTab={setTab} />}
+            {tab === 'notices' && <Notices user={user} />}
+            {tab === 'schedule' && <ScheduleTab user={user} />}
+            {tab === 'report' && <ReportTab user={user} />}
+            {tab === 'chat' && <ChatTab user={user} />}
+            {tab === 'results' && <ResultsTab user={user} />}
+            {tab === 'profile' && <Profile user={user} setTab={setTab} onFullLogout={fullLogout} theme={theme} setTheme={setTheme} />}
+            {tab === 'users' && user.role === 'ADMIN' && <Users />}
+          </main>
+
+          <nav className="bottom-nav fixed bottom-0 left-0 right-0 flex justify-around py-2 z-20">
+            <button onClick={() => setTab('home')} className={`text-xs py-1 ${tab==='home'?'text-red-500':'text-gray-400'}`}>Home</button>
+            <button onClick={() => setTab('notices')} className={`text-xs py-1 ${tab==='notices'?'text-red-500':'text-gray-400'}`}>Notices</button>
+            <button onClick={() => setTab('schedule')} className={`text-xs py-1 ${tab==='schedule'?'text-red-500':'text-gray-400'}`}>Proxy</button>
+            <button onClick={() => setTab('chat')} className={`text-xs py-1 ${tab==='chat'?'text-red-500':'text-gray-400'}`}>Chat</button>
+            <button onClick={() => setTab('profile')} className={`text-xs py-1 ${tab==='profile'?'text-red-500':'text-gray-400'}`}>Profile</button>
+          </nav>
+        </div>
+      );
+    }
+
+    // ==================== PIN ====================
+    function PinScreen({ onSuccess, onUsePassword, onFullLogout, theme, setTheme }) {
+      const [pin, setPin] = useState('');
+      const [error, setError] = useState('');
+      let saved = {};
+      try { saved = JSON.parse(localStorage.getItem('bes_pin_user') || '{}'); } catch(e) {}
+
+      const press = (n) => {
+        if (pin.length >= 4) return;
+        const next = pin + n;
+        setPin(next);
+        setError('');
+        if (next.length === 4) {
+          if (next === saved.pin) onSuccess({ id: saved.username, name: saved.name, role: saved.role });
+          else { setError('Wrong PIN'); setTimeout(() => setPin(''), 400); }
+        }
+      };
+
+      return (
+        <div className="min-h-screen flex items-center justify-center p-6">
+          <div className="w-full max-w-xs text-center">
+            <div className="flex justify-end mb-4">
+              <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="px-3 py-1 rounded-full input-bg text-sm">
+                {theme === 'dark' ? 'Light' : 'Dark'}
+              </button>
+            </div>
+            <h2 className="text-xl font-bold mb-1">Welcome back</h2>
+            <p className="text-gray-400 mb-6">{saved.name || 'User'}</p>
+            <div className="flex justify-center gap-3 mb-6">
+              {[0,1,2,3].map(i => <div key={i} className={`pin-dot ${pin.length > i ? 'filled' : ''}`}></div>)}
+            </div>
+            {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
+            <div className="grid grid-cols-3 gap-3 mb-6">
+              {[1,2,3,4,5,6,7,8,9].map(n => (
+                <button key={n} onClick={() => press(String(n))} className="h-14 rounded-full text-xl input-bg">{n}</button>
+              ))}
+              <div></div>
+              <button onClick={() => press('0')} className="h-14 rounded-full text-xl input-bg">0</button>
+              <button onClick={() => setPin(pin.slice(0,-1))} className="h-14 rounded-full text-lg input-bg">⌫</button>
+            </div>
+            <button onClick={onUsePassword} className="text-sm text-gray-400 underline block w-full mb-2">Use Password</button>
+            <button onClick={onFullLogout} className="text-sm text-red-400">Logout Completely</button>
+          </div>
+        </div>
+      );
+    }
+
+    function SetPinScreen({ onSave, onSkip }) {
+      const [pin, setPin] = useState('');
+      const [confirm, setConfirm] = useState('');
+      const [step, setStep] = useState(1);
+      const press = (n) => {
+        if (step === 1) {
+          if (pin.length >= 4) return;
+          const next = pin + n;
+          setPin(next);
+          if (next.length === 4) setTimeout(() => setStep(2), 200);
+        } else {
+          if (confirm.length >= 4) return;
+          const next = confirm + n;
+          setConfirm(next);
+          if (next.length === 4) {
+            if (next === pin) onSave(next);
+            else { alert('PIN does not match'); setPin(''); setConfirm(''); setStep(1); }
+          }
+        }
+      };
+      const current = step === 1 ? pin : confirm;
+      return (
+        <div className="min-h-screen flex items-center justify-center p-6">
+          <div className="w-full max-w-xs text-center">
+            <h2 className="text-xl font-bold mb-2">{step === 1 ? 'Create PIN' : 'Confirm PIN'}</h2>
+            <p className="text-gray-400 mb-6">{step === 1 ? 'Set 4-digit PIN' : 'Enter again'}</p>
+            <div className="flex justify-center gap-3 mb-6">
+              {[0,1,2,3].map(i => <div key={i} className={`pin-dot ${current.length > i ? 'filled' : ''}`}></div>)}
+            </div>
+            <div className="grid grid-cols-3 gap-3 mb-6">
+              {[1,2,3,4,5,6,7,8,9].map(n => (
+                <button key={n} onClick={() => press(String(n))} className="h-14 rounded-full text-xl input-bg">{n}</button>
+              ))}
+              <div></div>
+              <button onClick={() => press('0')} className="h-14 rounded-full text-xl input-bg">0</button>
+              <button onClick={() => step === 1 ? setPin(pin.slice(0,-1)) : setConfirm(confirm.slice(0,-1))} className="h-14 rounded-full text-lg input-bg">⌫</button>
+            </div>
+            <button onClick={onSkip} className="text-sm text-gray-400 underline">Skip</button>
+          </div>
+        </div>
+      );
+    }
+
+    function LoginScreen({ onLogin, theme, setTheme }) {
+      const [id, setId] = useState('');
+      const [pass, setPass] = useState('');
+      const [loading, setLoading] = useState(false);
+      const submit = async () => {
+        if (!id.trim() || !pass.trim()) return alert('Enter Login ID and Password');
+        setLoading(true);
+        await onLogin(id, pass);
+        setLoading(false);
+      };
+      return (
+        <div className="min-h-screen flex items-center justify-center p-4">
+          <div className="w-full max-w-sm">
+            <div className="flex justify-end mb-4">
+              <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="px-3 py-1 rounded-full input-bg text-sm">
+                {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+              </button>
+            </div>
+            <div className="text-center mb-8">
+              <h1 className="text-2xl font-bold">Bes An Noor Model School</h1>
+              <p className="text-gray-400 mt-1">(Boys' Unit)</p>
+            </div>
+            <div className="card p-6 space-y-4">
+              <input value={id} onChange={e => setId(e.target.value)} placeholder="Login ID" className="w-full p-3 rounded-xl input-bg" />
+              <input type="password" value={pass} onChange={e => setPass(e.target.value)} placeholder="Password" className="w-full p-3 rounded-xl input-bg" />
+              <button onClick={submit} disabled={loading} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">
+                {loading ? 'Please wait...' : 'Continue'}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ==================== HOME ====================
+    function Home({ user, setTab }) {
+      const { data: attendance, add, update } = useCollection('attendance');
+      const today = new Date().toISOString().split('T')[0];
+      const mine = attendance.find(a => a.date === today && a.teacher_id === user.id);
+      const todayList = attendance.filter(a => a.date === today);
+      const [showForm, setShowForm] = useState(false);
+      const [form, setForm] = useState({ reason: '', from_date: today, to_date: '', leave_time: 'Morning', return_date: '', return_time: '' });
+
+      const markPresent = () => {
+        if (mine) update(mine.id, { status: 'PRESENT' });
+        else add({ date: today, teacher_id: user.id, name: user.name, status: 'PRESENT' });
+        setShowForm(false);
+      };
+      const submitAbsent = () => {
+        if (!form.reason || !form.to_date || !form.return_date) return alert('Fill required fields');
+        const payload = { date: today, teacher_id: user.id, name: user.name, status: 'ABSENT', ...form };
+        if (mine) update(mine.id, payload); else add(payload);
+        setShowForm(false);
+      };
+
+      return (
+        <div className="space-y-5">
+          <div className="card p-5">
+            <h2 className="font-bold text-xl">Welcome, {user.name}</h2>
+            <p className="text-sm text-gray-400">{user.role}</p>
+          </div>
+
+          <div className="card p-5">
+            <h3 className="font-bold mb-3">Daily Attendance</h3>
+            {mine && <p className="mb-3 text-sm">Current: <span className={mine.status === 'PRESENT' ? 'text-green-400' : 'text-orange-400'}>{mine.status}</span></p>}
+            {!showForm ? (
+              <div className="flex gap-3">
+                <button onClick={markPresent} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-full text-sm font-semibold">Present</button>
+                <button onClick={() => setShowForm(true)} className="flex-1 border border-orange-500/40 text-orange-400 py-3 rounded-full text-sm font-semibold input-bg">Absent</button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <textarea placeholder="Reason *" className="w-full p-3 rounded-xl input-bg" value={form.reason} onChange={e => setForm({...form, reason: e.target.value})} rows={3} />
+                <div className="grid grid-cols-2 gap-3">
+                  <input type="date" className="p-3 rounded-xl input-bg" value={form.from_date} onChange={e => setForm({...form, from_date: e.target.value})} />
+                  <input type="date" className="p-3 rounded-xl input-bg" value={form.to_date} onChange={e => setForm({...form, to_date: e.target.value})} />
+                </div>
+                <select className="w-full p-3 rounded-xl input-bg" value={form.leave_time} onChange={e => setForm({...form, leave_time: e.target.value})}>
+                  <option>Morning</option><option>Afternoon</option><option>Evening</option>
+                </select>
+                <div className="grid grid-cols-2 gap-3">
+                  <input type="date" className="p-3 rounded-xl input-bg" value={form.return_date} onChange={e => setForm({...form, return_date: e.target.value})} />
+                  <input type="time" className="p-3 rounded-xl input-bg" value={form.return_time} onChange={e => setForm({...form, return_time: e.target.value})} />
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={submitAbsent} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-xl font-semibold">Submit</button>
+                  <button onClick={() => setShowForm(false)} className="px-5 rounded-xl input-bg">Cancel</button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {user.role === 'ADMIN' && (
+            <div className="card p-5">
+              <h3 className="font-semibold mb-3">Today's Attendance</h3>
+              {todayList.length === 0 ? <p className="text-sm text-gray-400">No one yet</p> : todayList.map(a => (
+                <div key={a.id} className="flex justify-between py-2 border-b border-gray-700 last:border-0">
+                  <span>{a.name}</span>
+                  <span className={a.status === 'PRESENT' ? 'text-green-400' : 'text-orange-400'}>{a.status}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <button onClick={() => setTab('notices')} className="card p-4 text-left font-medium">Notices</button>
+            <button onClick={() => setTab('schedule')} className="card p-4 text-left font-medium">Proxy / Replace</button>
+            <button onClick={() => setTab('report')} className="card p-4 text-left font-medium">Report Issue</button>
+            <button onClick={() => setTab('chat')} className="card p-4 text-left font-medium">Chat</button>
+            <button onClick={() => setTab('results')} className="card p-4 text-left font-medium">Exam Results</button>
+            <button onClick={() => setTab('profile')} className="card p-4 text-left font-medium">Profile</button>
+          </div>
+        </div>
+      );
+    }
+
+    // ==================== NOTICES ====================
+    function Notices({ user }) {
+      const { data, add, remove } = useCollection('notices');
+      const [show, setShow] = useState(false);
+      const [title, setTitle] = useState('');
+      const [content, setContent] = useState('');
+      const [file, setFile] = useState(null);
+
+      const save = async () => {
+        if (!title || !content) return alert('Title & content required');
+        let file_url = file ? await uploadFile(file) : null;
+        add({ title, content, author: user.name, file_url });
+        setShow(false); setTitle(''); setContent(''); setFile(null);
+      };
+
+      return (
+        <div className="space-y-5">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold">Notices</h2>
+            {user.role === 'ADMIN' && <button onClick={() => setShow(!show)} className="bg-red-500/15 text-red-400 px-4 py-2 rounded-full text-sm">+ Add</button>}
+          </div>
+          {show && (
+            <div className="card p-5 space-y-3">
+              <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" className="w-full p-3 rounded-xl input-bg" />
+              <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Write notice..." className="w-full p-3 rounded-xl input-bg" rows={4} />
+              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e => setFile(e.target.files[0])} className="text-sm" />
+              <button onClick={save} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-xl font-bold">Publish</button>
+            </div>
+          )}
+          {data.map(n => (
+            <div key={n.id} className="card p-5 border-l-4 border-red-500">
+              <h3 className="font-bold text-lg">{n.title}</h3>
+              <p className="text-xs text-gray-400 mb-2">By {n.author}</p>
+              <p className="text-sm whitespace-pre-wrap">{linkify(n.content)}</p>
+              {n.file_url && <a href={n.file_url} target="_blank" className="text-blue-400 text-sm mt-2 block">View Attachment</a>}
+              {user.role === 'ADMIN' && <button onClick={() => confirm('Delete?') && remove(n.id)} className="text-red-400 text-xs mt-2">Delete</button>}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // ==================== SCHEDULE ====================
+    function ScheduleTab({ user }) {
+      const { data, add } = useCollection('proxies');
+      const today = new Date().toISOString().split('T')[0];
+      const items = data.filter(p => p.date === today);
+      const [show, setShow] = useState(false);
+      const [form, setForm] = useState({ date: today, type: 'PROXY', absent_teacher: '', proxy_teacher: '', class_room: '', subject: '' });
+
+      const save = () => {
+        if (!form.proxy_teacher) return alert('Teacher required');
+        add(form);
+        setShow(false);
+        setForm({ date: today, type: 'PROXY', absent_teacher: '', proxy_teacher: '', class_room: '', subject: '' });
+      };
+
+      return (
+        <div className="space-y-5">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold">Proxy / Replace</h2>
+            {user.role === 'ADMIN' && <button onClick={() => setShow(!show)} className="bg-red-500/15 text-red-400 px-4 py-2 rounded-full text-sm">+ Add</button>}
+          </div>
+          {show && user.role === 'ADMIN' && (
+            <div className="card p-5 space-y-3">
+              <select className="w-full p-3 rounded-xl input-bg" value={form.type} onChange={e => setForm({...form, type: e.target.value})}>
+                <option value="PROXY">Proxy</option><option value="REPLACE">Replace</option>
+              </select>
+              <input type="date" className="w-full p-3 rounded-xl input-bg" value={form.date} onChange={e => setForm({...form, date: e.target.value})} />
+              <input placeholder="Absent Teacher" className="w-full p-3 rounded-xl input-bg" value={form.absent_teacher} onChange={e => setForm({...form, absent_teacher: e.target.value})} />
+              <input placeholder="Proxy Teacher" className="w-full p-3 rounded-xl input-bg" value={form.proxy_teacher} onChange={e => setForm({...form, proxy_teacher: e.target.value})} />
+              <div className="grid grid-cols-2 gap-3">
+                <input placeholder="Class" className="p-3 rounded-xl input-bg" value={form.class_room} onChange={e => setForm({...form, class_room: e.target.value})} />
+                <input placeholder="Subject" className="p-3 rounded-xl input-bg" value={form.subject} onChange={e => setForm({...form, subject: e.target.value})} />
+              </div>
+              <button onClick={save} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-xl font-bold">Save</button>
+            </div>
+          )}
+          {items.length === 0 ? <p className="text-center text-gray-400 py-10">No classes today</p> : items.map(p => (
+            <div key={p.id} className="card p-5 border-l-4 border-red-500">
+              <div className="flex gap-2 text-xs mb-2">
+                <span className="px-2 py-1 rounded-full bg-red-500/20 text-red-400">{p.type}</span>
+                <span className="px-2 py-1 rounded-full input-bg">{p.class_room}</span>
+              </div>
+              <p><b>Assigned:</b> {p.proxy_teacher}</p>
+              <p className="text-gray-400 line-through text-sm">Original: {p.absent_teacher}</p>
+              <p className="text-sm mt-1">Subject: {p.subject}</p>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // ==================== REPORT ====================
+    function ReportTab({ user }) {
+      const { data: medical, add: addMed } = useCollection('medical');
+      const { data: maint, add: addMaint } = useCollection('maintenance');
+      const [type, setType] = useState('medical');
+      const [show, setShow] = useState(false);
+      const [form, setForm] = useState({ student_name: '', class_name: '', reg: '', room_number: '', description: '', issue_type: '', location: '' });
+
+      const submit = () => {
+        if (type === 'medical') {
+          if (!form.student_name || !form.description) return alert('Required');
+          addMed({ student_name: form.student_name, room: `Class: ${form.class_name} | Reg: ${form.reg} | Room: ${form.room_number}`, description: form.description, reported_by: user.name, status: 'PENDING' });
+        } else {
+          if (!form.issue_type || !form.description) return alert('Required');
+          addMaint({ type: form.issue_type, location: form.location, description: form.description, reported_by: user.name, status: 'PENDING' });
+        }
+        setShow(false);
+        setForm({ student_name: '', class_name: '', reg: '', room_number: '', description: '', issue_type: '', location: '' });
+      };
+
+      const list = type === 'medical' ? medical : maint;
+
+      return (
+        <div className="space-y-5">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold">Report Issues</h2>
+            {user.role === 'TEACHER' && <button onClick={() => setShow(!show)} className="bg-red-500/15 text-red-400 px-4 py-2 rounded-full text-sm">+ New</button>}
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => setType('medical')} className={`flex-1 py-2 rounded-xl text-sm ${type==='medical'?'bg-red-500/20 text-red-400':'input-bg'}`}>Medical</button>
+            <button onClick={() => setType('facility')} className={`flex-1 py-2 rounded-xl text-sm ${type==='facility'?'bg-red-500/20 text-red-400':'input-bg'}`}>Facility</button>
+          </div>
+          {show && user.role === 'TEACHER' && (
+            <div className="card p-5 space-y-3">
+              {type === 'medical' ? (
+                <>
+                  <input placeholder="Student Name *" className="w-full p-3 rounded-xl input-bg" value={form.student_name} onChange={e => setForm({...form, student_name: e.target.value})} />
+                  <div className="grid grid-cols-3 gap-2">
+                    <input placeholder="Class" className="p-3 rounded-xl input-bg" value={form.class_name} onChange={e => setForm({...form, class_name: e.target.value})} />
+                    <input placeholder="Reg" className="p-3 rounded-xl input-bg" value={form.reg} onChange={e => setForm({...form, reg: e.target.value})} />
+                    <input placeholder="Room" className="p-3 rounded-xl input-bg" value={form.room_number} onChange={e => setForm({...form, room_number: e.target.value})} />
+                  </div>
+                  <textarea placeholder="Problem *" className="w-full p-3 rounded-xl input-bg" value={form.description} onChange={e => setForm({...form, description: e.target.value})} rows={3} />
+                </>
+              ) : (
+                <>
+                  <input placeholder="Issue Type *" className="w-full p-3 rounded-xl input-bg" value={form.issue_type} onChange={e => setForm({...form, issue_type: e.target.value})} />
+                  <input placeholder="Location" className="w-full p-3 rounded-xl input-bg" value={form.location} onChange={e => setForm({...form, location: e.target.value})} />
+                  <textarea placeholder="Description *" className="w-full p-3 rounded-xl input-bg" value={form.description} onChange={e => setForm({...form, description: e.target.value})} rows={3} />
+                </>
+              )}
+              <button onClick={submit} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-xl font-bold">Submit</button>
+            </div>
+          )}
+          {list.map(item => (
+            <div key={item.id} className="card p-5 border-l-4 border-red-500">
+              <h4 className="font-bold">{type === 'medical' ? item.student_name : item.type}</h4>
+              <p className="text-xs text-gray-400">{item.room || item.location}</p>
+              <p className="text-sm mt-2">{item.description}</p>
+              <p className="text-xs text-gray-500 mt-2">By: {item.reported_by}</p>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // ==================== CHAT ====================
     function ChatTab({ user }) {
-      const { data, add, update, remove } = useCollection('chat_messages');
+      const { data, add, remove } = useCollection('chat_messages');
       const { data: allUsers } = useCollection('users');
       const [message, setMessage] = useState('');
       const [file, setFile] = useState(null);
@@ -735,7 +1099,7 @@
           rec.start();
           recorderRef.current = rec;
           setRecording(true);
-        } catch (e) { alert('Mic permission needed'); }
+        } catch (e) { alert('Microphone permission needed'); }
       };
 
       const stopRec = () => {
@@ -771,21 +1135,21 @@
       };
 
       return (
-        <div className="space-y-4 max-w-3xl">
-          <h2 className="text-2xl font-bold">Staff Chat</h2>
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold">Staff Chat</h2>
           <div className="card p-4 chat-box space-y-3">
             {data.slice().reverse().map(m => (
               <div key={m.id} className={`flex ${m.sender_name === user.name ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${m.is_broadcast ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white' : (m.sender_name === user.name ? 'bg-red-500/20' : 'input-bg')}`}>
+                <div className={`max-w-[85%] rounded-2xl px-4 py-2 ${m.is_broadcast ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white' : (m.sender_name === user.name ? 'bg-red-500/20' : 'input-bg')}`}>
                   {m.is_broadcast && <div className="text-xs font-bold mb-1">📢 OFFICIAL</div>}
-                  <div className="text-xs mb-1 opacity-80">{m.sender_name} · {m.sender_role}</div>
+                  <div className="text-xs opacity-80 mb-1">{m.sender_name} · {m.sender_role}</div>
                   {m.message && <p className="text-sm">{linkify(m.message)}</p>}
                   {m.is_voice && m.file_url && <audio controls src={m.file_url} className="mt-2 w-full" style={{height:32}} />}
-                  {m.file_url && !m.is_voice && m.file_url.match(/\.(jpg|jpeg|png|gif)$/i) && (
-                    <img src={m.file_url} className="mt-2 rounded-xl max-h-48 cursor-pointer" onClick={() => window.open(m.file_url)} />
+                  {m.file_url && !m.is_voice && /\.(jpg|jpeg|png|gif)$/i.test(m.file_url) && (
+                    <img src={m.file_url} className="mt-2 rounded-xl max-h-48" onClick={() => window.open(m.file_url)} />
                   )}
-                  {m.file_url && m.file_url.match(/\.pdf$/i) && (
-                    <a href={m.file_url} target="_blank" className="text-sm mt-2 block underline">📄 PDF</a>
+                  {m.file_url && /\.pdf$/i.test(m.file_url) && (
+                    <a href={m.file_url} target="_blank" className="text-sm mt-2 block underline">📄 PDF Document</a>
                   )}
                   {user.role === 'ADMIN' && <button onClick={() => confirm('Delete?') && remove(m.id)} className="text-xs opacity-60 mt-1">Delete</button>}
                 </div>
@@ -797,7 +1161,7 @@
           {showMentions && (
             <div className="card p-2 max-h-32 overflow-y-auto">
               {allUsers.filter(u => u.full_name.toLowerCase().includes(mentionFilter)).slice(0,5).map(u => (
-                <button key={u.id} onClick={() => insertMention(u.full_name.split(' ')[0])} className="block w-full text-left px-3 py-2 text-sm rounded hover:bg-red-500/10">
+                <button key={u.id} onClick={() => insertMention(u.full_name.split(' ')[0])} className="block w-full text-left px-3 py-2 text-sm rounded">
                   @{u.full_name}
                 </button>
               ))}
@@ -812,18 +1176,18 @@
               </label>
             )}
             <div className="flex gap-2">
-              <input value={message} onChange={e => handleInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()} placeholder="Message... (@ to mention)" className="flex-1 p-3 rounded-xl input-bg" />
+              <input value={message} onChange={e => handleInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()} placeholder="Message... (@name)" className="flex-1 p-3 rounded-xl input-bg text-sm" />
               <button onClick={recording ? stopRec : startRec} className={`px-3 rounded-xl ${recording ? 'bg-red-500 text-white' : 'input-bg'}`}>🎤</button>
-              <button onClick={send} className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-5 rounded-xl font-semibold">Send</button>
+              <button onClick={send} className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-4 rounded-xl font-semibold text-sm">Send</button>
             </div>
-            <input type="file" accept=".pdf,.jpg,.png" onChange={e => setFile(e.target.files[0])} className="text-sm" />
+            <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e => setFile(e.target.files[0])} className="text-sm" />
             {recording && <p className="text-xs text-red-400">Recording... tap mic to stop</p>}
           </div>
         </div>
       );
     }
 
-    // ========== RESULTS ==========
+    // ==================== RESULTS ====================
     function ResultsTab({ user }) {
       const { data, add, remove } = useCollection('exam_results');
       const [show, setShow] = useState(false);
@@ -839,16 +1203,16 @@
       };
 
       return (
-        <div className="space-y-5 max-w-3xl">
+        <div className="space-y-5">
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">Exam Results</h2>
+            <h2 className="text-xl font-bold">Exam Results</h2>
             {user.role === 'ADMIN' && <button onClick={() => setShow(!show)} className="bg-red-500/15 text-red-400 px-4 py-2 rounded-full text-sm">+ Upload</button>}
           </div>
           {show && user.role === 'ADMIN' && (
             <div className="card p-5 space-y-3">
               <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" className="w-full p-3 rounded-xl input-bg" />
-              <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="Description" className="w-full p-3 rounded-xl input-bg min-h-[80px]" />
-              <input type="file" accept=".pdf,.jpg,.png" onChange={e => setFile(e.target.files[0])} className="text-sm" />
+              <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="Description" className="w-full p-3 rounded-xl input-bg" rows={3} />
+              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e => setFile(e.target.files[0])} className="text-sm" />
               <button onClick={save} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-xl font-bold">Upload</button>
             </div>
           )}
@@ -865,11 +1229,11 @@
       );
     }
 
-    // ========== PROFILE ==========
-    function Profile({ user, setUser, setTab, onFullLogout, theme, setTheme }) {
+    // ==================== PROFILE ====================
+    function Profile({ user, setTab, onFullLogout, theme, setTheme }) {
       return (
-        <div className="space-y-5 max-w-lg">
-          <h2 className="text-2xl font-bold">My Profile</h2>
+        <div className="space-y-5">
+          <h2 className="text-xl font-bold">My Profile</h2>
           <div className="card p-6 space-y-4">
             <div><p className="text-xs text-gray-400">Name</p><p className="font-medium text-lg">{user.name}</p></div>
             <div><p className="text-xs text-gray-400">Role</p><p className="font-medium">{user.role}</p></div>
@@ -886,16 +1250,16 @@
       );
     }
 
-    // ========== USERS ==========
+    // ==================== USERS ====================
     function Users() {
       const { data, add, remove } = useCollection('users');
       const [show, setShow] = useState(false);
       const [form, setForm] = useState({ username: '', password: '', full_name: '', role: 'TEACHER' });
 
       return (
-        <div className="space-y-5 max-w-3xl">
+        <div className="space-y-5">
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">Manage Users</h2>
+            <h2 className="text-xl font-bold">Manage Users</h2>
             <button onClick={() => setShow(!show)} className="bg-red-500/15 text-red-400 px-4 py-2 rounded-full text-sm">+ Create</button>
           </div>
           {show && (
@@ -915,21 +1279,19 @@
                   setShow(false);
                   setForm({ username: '', password: '', full_name: '', role: 'TEACHER' });
                   alert('Created!');
-                } else alert('Fill all');
+                } else alert('Fill all fields');
               }} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-xl font-bold">Create</button>
             </div>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {data.map(u => (
-              <div key={u.id} className="card p-4 flex justify-between items-center">
-                <div>
-                  <p className="font-medium">{u.full_name}</p>
-                  <p className="text-xs text-gray-400">{u.role}</p>
-                </div>
-                <button onClick={() => confirm('Delete?') && remove(u.id)} className="text-red-400 text-sm">Delete</button>
+          {data.map(u => (
+            <div key={u.id} className="card p-4 flex justify-between items-center">
+              <div>
+                <p className="font-medium">{u.full_name}</p>
+                <p className="text-xs text-gray-400">{u.role}</p>
               </div>
-            ))}
-          </div>
+              <button onClick={() => confirm('Delete ' + u.full_name + '?') && remove(u.id)} className="text-red-400 text-sm">Delete</button>
+            </div>
+          ))}
         </div>
       );
     }
