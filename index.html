@@ -90,7 +90,6 @@
       );
     }
 
-    // FIXED UPLOAD FUNCTION
     async function uploadFile(file) {
       if (!file) return null;
       const fileExt = file.name.split('.').pop();
@@ -107,39 +106,6 @@
 
       const { data } = supabase.storage.from('school-files').getPublicUrl(fileName);
       return data.publicUrl;
-    }
-
-    // Reactions Component
-    function Reactions({ targetType, targetId, user, reactions, addReaction, removeReaction }) {
-      const emojis = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
-      const myReaction = reactions.find(r => r.target_type === targetType && r.target_id === String(targetId) && r.user_name === user.name);
-      const counts = {};
-      reactions.filter(r => r.target_type === targetType && r.target_id === String(targetId)).forEach(r => {
-        counts[r.emoji] = (counts[r.emoji] || 0) + 1;
-      });
-
-      const toggle = (emoji) => {
-        if (myReaction) {
-          if (myReaction.emoji === emoji) {
-            removeReaction(myReaction.id);
-          } else {
-            removeReaction(myReaction.id);
-            addReaction({ target_type: targetType, target_id: String(targetId), user_name: user.name, emoji });
-          }
-        } else {
-          addReaction({ target_type: targetType, target_id: String(targetId), user_name: user.name, emoji });
-        }
-      };
-
-      return (
-        <div className="flex flex-wrap gap-1 mt-2">
-          {emojis.map(e => (
-            <button key={e} onClick={() => toggle(e)} className={`text-sm px-2 py-0.5 rounded-full ${myReaction?.emoji === e ? 'bg-red-500/30' : 'bg-[#2c2c2e]'}`}>
-              {e} {counts[e] || ''}
-            </button>
-          ))}
-        </div>
-      );
     }
 
     function App() {
@@ -394,11 +360,9 @@
       );
     }
 
-    // ==================== NOTICES ====================
     function Notices({ user }) {
       const { data, add, update, remove } = useCollection('notices');
       const { data: comments, add: addComment, remove: removeComment } = useCollection('comments');
-      const { data: reactions, add: addReaction, remove: removeReaction } = useCollection('reactions');
       const [show, setShow] = useState(false);
       const [editId, setEditId] = useState(null);
       const [title, setTitle] = useState('');
@@ -483,8 +447,6 @@
                     </a>
                   )}
 
-                  <Reactions targetType="notice" targetId={n.id} user={user} reactions={reactions} addReaction={addReaction} removeReaction={removeReaction} />
-
                   <div className="mt-4 border-t border-[#2c2c2e] pt-3">
                     <p className="text-xs text-gray-400 mb-2">Comments ({noticeComments.length})</p>
                     {noticeComments.map(c => (
@@ -511,7 +473,6 @@
       );
     }
 
-    // ==================== PROXY / REPLACE ====================
     function ScheduleTab({ user }) {
       const { data, add, update, remove } = useCollection('proxies');
       const { data: comments, add: addComment, remove: removeComment } = useCollection('comments');
@@ -619,7 +580,6 @@
       );
     }
 
-    // ==================== REPORT ====================
     function ReportTab({ user }) {
       const { data: medical, add: addMed, update: upMed } = useCollection('medical');
       const { data: maint, add: addMaint, update: upMaint } = useCollection('maintenance');
@@ -711,14 +671,15 @@
       );
     }
 
-    // ==================== CHAT ====================
     function ChatTab({ user }) {
       const { data, add, update, remove } = useCollection('chat_messages');
       const { data: reactions, add: addReaction, remove: removeReaction } = useCollection('reactions');
       const [message, setMessage] = useState('');
       const [file, setFile] = useState(null);
       const [editId, setEditId] = useState(null);
+      const [reactingTo, setReactingTo] = useState(null);
       const bottomRef = useRef();
+      const longPressTimer = useRef(null);
 
       useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -749,15 +710,76 @@
         setMessage(m.message || '');
       };
 
+      const handleTouchStart = (id) => {
+        longPressTimer.current = setTimeout(() => {
+          setReactingTo(id);
+        }, 500);
+      };
+
+      const handleTouchEnd = () => {
+        clearTimeout(longPressTimer.current);
+      };
+
+      const handleContextMenu = (e, id) => {
+        e.preventDefault();
+        setReactingTo(id);
+      };
+
+      const emojis = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+
+      const toggleReaction = (targetId, emoji) => {
+        const existing = reactions.find(r => 
+          r.target_type === 'chat' && 
+          r.target_id === String(targetId) && 
+          r.user_name === user.name
+        );
+
+        if (existing) {
+          if (existing.emoji === emoji) {
+            removeReaction(existing.id);
+          } else {
+            removeReaction(existing.id);
+            addReaction({ target_type: 'chat', target_id: String(targetId), user_name: user.name, emoji });
+          }
+        } else {
+          addReaction({ target_type: 'chat', target_id: String(targetId), user_name: user.name, emoji });
+        }
+        setReactingTo(null);
+      };
+
+      const isImage = (url) => {
+        if (!url) return false;
+        return url.match(/\.(jpeg|jpg|png|gif|webp)$/i);
+      };
+
+      const isPdf = (url) => {
+        if (!url) return false;
+        return url.match(/\.pdf$/i);
+      };
+
       return (
         <div className="space-y-4 max-w-3xl">
           <h2 className="text-2xl font-bold">Staff Chat</h2>
+          
           <div className="card p-4 chat-box space-y-3">
             {data.slice().reverse().map(m => {
               const canEdit = user.role === 'ADMIN' || m.sender_name === user.name;
+              const messageReactions = reactions.filter(r => r.target_type === 'chat' && r.target_id === String(m.id));
+              
+              const reactionCounts = {};
+              messageReactions.forEach(r => {
+                reactionCounts[r.emoji] = (reactionCounts[r.emoji] || 0) + 1;
+              });
+
               return (
                 <div key={m.id} className={`flex ${m.sender_name === user.name ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${m.sender_name === user.name ? 'bg-red-500/20' : 'bg-[#252528]'}`}>
+                  <div 
+                    className={`max-w-[80%] rounded-2xl px-4 py-2 relative ${m.sender_name === user.name ? 'bg-red-500/20' : 'bg-[#252528]'}`}
+                    onTouchStart={() => handleTouchStart(m.id)}
+                    onTouchEnd={handleTouchEnd}
+                    onTouchMove={handleTouchEnd}
+                    onContextMenu={(e) => handleContextMenu(e, m.id)}
+                  >
                     <div className="flex justify-between items-center gap-3 mb-1">
                       <span className="text-xs font-medium text-red-400">{m.sender_name} · {m.sender_role}</span>
                       <div className="flex gap-2">
@@ -765,13 +787,64 @@
                         {user.role === 'ADMIN' && <button onClick={() => { if(confirm('Delete?')) remove(m.id); }} className="text-red-400 text-xs">Delete</button>}
                       </div>
                     </div>
+
                     {m.message && <p className="text-sm">{linkify(m.message)}</p>}
-                    {m.file_url && (
-                      <a href={m.file_url} target="_blank" className="text-blue-400 text-sm flex items-center gap-1 mt-1">
+
+                    {m.file_url && isImage(m.file_url) && (
+                      <img 
+                        src={m.file_url} 
+                        alt="Shared photo" 
+                        className="mt-2 rounded-xl max-w-full max-h-64 object-cover cursor-pointer"
+                        onClick={() => window.open(m.file_url, '_blank')}
+                      />
+                    )}
+
+                    {m.file_url && isPdf(m.file_url) && (
+                      <a 
+                        href={m.file_url} 
+                        target="_blank" 
+                        className="mt-2 flex items-center gap-3 bg-[#1c1c1e] p-3 rounded-xl border border-[#3a3a3c]"
+                      >
+                        <div className="text-3xl">📄</div>
+                        <div>
+                          <p className="text-sm font-medium text-white">PDF Document</p>
+                          <p className="text-xs text-gray-400">Tap to open</p>
+                        </div>
+                      </a>
+                    )}
+
+                    {m.file_url && !isImage(m.file_url) && !isPdf(m.file_url) && (
+                      <a href={m.file_url} target="_blank" className="text-blue-400 text-sm flex items-center gap-1 mt-2">
                         <IconFile /> Attachment
                       </a>
                     )}
-                    <Reactions targetType="chat" targetId={m.id} user={user} reactions={reactions} addReaction={addReaction} removeReaction={removeReaction} />
+
+                    {Object.keys(reactionCounts).length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {Object.entries(reactionCounts).map(([emoji, count]) => (
+                          <span key={emoji} className="text-xs bg-[#2c2c2e] px-2 py-0.5 rounded-full">
+                            {emoji} {count > 1 ? count : ''}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {reactingTo === m.id && (
+                      <div className="absolute -top-12 left-0 right-0 flex justify-center z-50">
+                        <div className="bg-[#2c2c2e] rounded-full px-3 py-2 flex gap-2 shadow-xl border border-[#3a3a3c]">
+                          {emojis.map(e => (
+                            <button 
+                              key={e} 
+                              onClick={() => toggleReaction(m.id, e)}
+                              className="text-xl hover:scale-125 transition"
+                            >
+                              {e}
+                            </button>
+                          ))}
+                          <button onClick={() => setReactingTo(null)} className="text-gray-400 text-sm ml-1">✕</button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -782,8 +855,16 @@
           <div className="card p-3 flex flex-col gap-2">
             {editId && <p className="text-xs text-yellow-400">Editing message...</p>}
             <div className="flex gap-2">
-              <input value={message} onChange={e => setMessage(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()} placeholder="Type a message..." className="flex-1 p-3 bg-[#2c2c2e] rounded-xl text-white" />
-              <button onClick={send} className="bg-gradient-to-r from-red-500 to-pink-500 px-5 rounded-xl font-semibold">{editId ? 'Update' : 'Send'}</button>
+              <input 
+                value={message} 
+                onChange={e => setMessage(e.target.value)} 
+                onKeyDown={e => e.key === 'Enter' && send()} 
+                placeholder="Type a message..." 
+                className="flex-1 p-3 bg-[#2c2c2e] rounded-xl text-white" 
+              />
+              <button onClick={send} className="bg-gradient-to-r from-red-500 to-pink-500 px-5 rounded-xl font-semibold">
+                {editId ? 'Update' : 'Send'}
+              </button>
             </div>
             <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e => setFile(e.target.files[0])} className="text-sm text-gray-400" />
           </div>
@@ -791,10 +872,8 @@
       );
     }
 
-    // ==================== EXAM RESULTS (Only Admin can upload) ====================
     function ResultsTab({ user }) {
       const { data, add, update, remove } = useCollection('exam_results');
-      const { data: reactions, add: addReaction, remove: removeReaction } = useCollection('reactions');
       const [show, setShow] = useState(false);
       const [editId, setEditId] = useState(null);
       const [title, setTitle] = useState('');
@@ -875,7 +954,6 @@
                         <IconFile /> View / Download File
                       </a>
                     )}
-                    <Reactions targetType="exam" targetId={r.id} user={user} reactions={reactions} addReaction={addReaction} removeReaction={removeReaction} />
                   </div>
                 );
               })}
@@ -885,7 +963,6 @@
       );
     }
 
-    // ==================== PROFILE ====================
     function Profile({ user, setUser, setTab }) {
       const [showEdit, setShowEdit] = useState(false);
       const [newLoginId, setNewLoginId] = useState(user.id);
@@ -952,7 +1029,6 @@
       );
     }
 
-    // ==================== USERS ====================
     function Users() {
       const { data, add, remove } = useCollection('users');
       const [show, setShow] = useState(false);
