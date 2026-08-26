@@ -34,7 +34,6 @@
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlaXlidWhub3pncWF0ZHlyZGhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzIyNDEsImV4cCI6MjEwMjU0ODI0MX0.a_1otAvBMRa20HSA01jcvtCbxwUpXNbmCzVmA9Qm-DE';
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Icons
     const IconHome = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg></span>;
     const IconClipboard = () => <span className="icon"><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></span>;
     const IconCalendar = () => <span className="icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>;
@@ -83,7 +82,6 @@
       return { data, add, update, remove, load };
     }
 
-    // Make links clickable
     function linkify(text) {
       if (!text) return '';
       const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -92,16 +90,56 @@
       );
     }
 
+    // FIXED UPLOAD FUNCTION
     async function uploadFile(file) {
       if (!file) return null;
-      const fileName = `\( {Date.now()}_ \){file.name}`;
-      const { data, error } = await supabase.storage.from('school-files').upload(fileName, file);
+      const fileExt = file.name.split('.').pop();
+      const fileName = Date.now() + '_' + Math.random().toString(36).substring(2, 9) + '.' + fileExt;
+
+      const { error } = await supabase.storage
+        .from('school-files')
+        .upload(fileName, file);
+
       if (error) {
         alert('Upload failed: ' + error.message);
         return null;
       }
-      const { data: urlData } = supabase.storage.from('school-files').getPublicUrl(fileName);
-      return urlData.publicUrl;
+
+      const { data } = supabase.storage.from('school-files').getPublicUrl(fileName);
+      return data.publicUrl;
+    }
+
+    // Reactions Component
+    function Reactions({ targetType, targetId, user, reactions, addReaction, removeReaction }) {
+      const emojis = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+      const myReaction = reactions.find(r => r.target_type === targetType && r.target_id === String(targetId) && r.user_name === user.name);
+      const counts = {};
+      reactions.filter(r => r.target_type === targetType && r.target_id === String(targetId)).forEach(r => {
+        counts[r.emoji] = (counts[r.emoji] || 0) + 1;
+      });
+
+      const toggle = (emoji) => {
+        if (myReaction) {
+          if (myReaction.emoji === emoji) {
+            removeReaction(myReaction.id);
+          } else {
+            removeReaction(myReaction.id);
+            addReaction({ target_type: targetType, target_id: String(targetId), user_name: user.name, emoji });
+          }
+        } else {
+          addReaction({ target_type: targetType, target_id: String(targetId), user_name: user.name, emoji });
+        }
+      };
+
+      return (
+        <div className="flex flex-wrap gap-1 mt-2">
+          {emojis.map(e => (
+            <button key={e} onClick={() => toggle(e)} className={`text-sm px-2 py-0.5 rounded-full ${myReaction?.emoji === e ? 'bg-red-500/30' : 'bg-[#2c2c2e]'}`}>
+              {e} {counts[e] || ''}
+            </button>
+          ))}
+        </div>
+      );
     }
 
     function App() {
@@ -356,10 +394,11 @@
       );
     }
 
-    // ==================== NOTICES with Comments ====================
+    // ==================== NOTICES ====================
     function Notices({ user }) {
       const { data, add, update, remove } = useCollection('notices');
       const { data: comments, add: addComment, remove: removeComment } = useCollection('comments');
+      const { data: reactions, add: addReaction, remove: removeReaction } = useCollection('reactions');
       const [show, setShow] = useState(false);
       const [editId, setEditId] = useState(null);
       const [title, setTitle] = useState('');
@@ -370,18 +409,30 @@
       const save = async () => {
         if (!title || !content) return alert('Please fill title and content');
         let file_url = null;
-        if (file) file_url = await uploadFile(file);
+        if (file) {
+          file_url = await uploadFile(file);
+          if (!file_url && file) return;
+        }
         if (editId) {
-          update(editId, { title, content, file_url: file_url || undefined });
+          const changes = { title, content };
+          if (file_url) changes.file_url = file_url;
+          update(editId, changes);
         } else {
           add({ title, content, type: 'text', author: user.name, file_url });
         }
         setShow(false); setEditId(null); setTitle(''); setContent(''); setFile(null);
       };
 
+      const startEdit = (n) => {
+        setEditId(n.id);
+        setTitle(n.title);
+        setContent(n.content);
+        setShow(true);
+      };
+
       const postComment = (noticeId) => {
         if (!commentText[noticeId]?.trim()) return;
-        addComment({ target_type: 'notice', target_id: noticeId, user_name: user.name, content: commentText[noticeId] });
+        addComment({ target_type: 'notice', target_id: String(noticeId), user_name: user.name, content: commentText[noticeId] });
         setCommentText({ ...commentText, [noticeId]: '' });
       };
 
@@ -390,18 +441,18 @@
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold">Notices</h2>
             {user.role === 'ADMIN' && (
-              <button onClick={() => { setShow(!show); setEditId(null); setTitle(''); setContent(''); }} className="text-red-500 bg-red-500/10 p-2 rounded-full"><IconPlus /></button>
+              <button onClick={() => { setShow(!show); setEditId(null); setTitle(''); setContent(''); setFile(null); }} className="text-red-500 bg-red-500/10 p-2 rounded-full"><IconPlus /></button>
             )}
           </div>
 
-          {show && user.role === 'ADMIN' && (
+          {show && (user.role === 'ADMIN' || editId) && (
             <div className="card p-5 space-y-3">
               <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" />
-              <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Write notice... (links will be clickable)" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[100px]" />
+              <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Write notice..." className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[100px]" />
               <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e => setFile(e.target.files[0])} className="w-full text-sm text-gray-400" />
               <div className="flex gap-3">
                 <button onClick={save} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">{editId ? 'Update' : 'Publish'}</button>
-                <button onClick={() => setShow(false)} className="px-5 bg-[#2c2c2e] rounded-xl">Cancel</button>
+                <button onClick={() => { setShow(false); setEditId(null); }} className="px-5 bg-[#2c2c2e] rounded-xl">Cancel</button>
               </div>
             </div>
           )}
@@ -409,7 +460,8 @@
           {data.length === 0 && <p className="text-center text-gray-400 py-12">No notices yet</p>}
           <div className="space-y-4">
             {data.map(n => {
-              const noticeComments = comments.filter(c => c.target_type === 'notice' && c.target_id === n.id);
+              const noticeComments = comments.filter(c => c.target_type === 'notice' && c.target_id === String(n.id));
+              const canEdit = user.role === 'ADMIN' || n.author === user.name;
               return (
                 <div key={n.id} className="card p-5 border-l-4 border-red-500">
                   <div className="flex justify-between items-start">
@@ -417,10 +469,10 @@
                       <h3 className="font-bold text-lg">{n.title}</h3>
                       <p className="text-xs text-gray-400 mb-2">By {n.author}</p>
                     </div>
-                    {user.role === 'ADMIN' && (
+                    {canEdit && (
                       <div className="flex gap-2">
-                        <button onClick={() => { setEditId(n.id); setTitle(n.title); setContent(n.content); setShow(true); }} className="text-blue-400 p-1"><IconEdit /></button>
-                        <button onClick={() => { if(confirm('Delete?')) remove(n.id); }} className="text-red-400 p-1"><IconTrash /></button>
+                        <button onClick={() => startEdit(n)} className="text-blue-400 p-1"><IconEdit /></button>
+                        {user.role === 'ADMIN' && <button onClick={() => { if(confirm('Delete?')) remove(n.id); }} className="text-red-400 p-1"><IconTrash /></button>}
                       </div>
                     )}
                   </div>
@@ -431,7 +483,8 @@
                     </a>
                   )}
 
-                  {/* Comments */}
+                  <Reactions targetType="notice" targetId={n.id} user={user} reactions={reactions} addReaction={addReaction} removeReaction={removeReaction} />
+
                   <div className="mt-4 border-t border-[#2c2c2e] pt-3">
                     <p className="text-xs text-gray-400 mb-2">Comments ({noticeComments.length})</p>
                     {noticeComments.map(c => (
@@ -446,12 +499,7 @@
                       </div>
                     ))}
                     <div className="flex gap-2 mt-2">
-                      <input 
-                        value={commentText[n.id] || ''} 
-                        onChange={e => setCommentText({...commentText, [n.id]: e.target.value})}
-                        placeholder="Write a comment..." 
-                        className="flex-1 p-2 bg-[#2c2c2e] rounded-lg text-sm text-white"
-                      />
+                      <input value={commentText[n.id] || ''} onChange={e => setCommentText({...commentText, [n.id]: e.target.value})} placeholder="Write a comment..." className="flex-1 p-2 bg-[#2c2c2e] rounded-lg text-sm text-white" />
                       <button onClick={() => postComment(n.id)} className="bg-red-500 px-4 rounded-lg text-sm">Post</button>
                     </div>
                   </div>
@@ -484,7 +532,7 @@
 
       const postComment = (id) => {
         if (!commentText[id]?.trim()) return;
-        addComment({ target_type: 'proxy', target_id: id, user_name: user.name, content: commentText[id] });
+        addComment({ target_type: 'proxy', target_id: String(id), user_name: user.name, content: commentText[id] });
         setCommentText({ ...commentText, [id]: '' });
       };
 
@@ -525,7 +573,7 @@
           {todayItems.length === 0 ? <p className="text-center text-gray-400 py-12">No classes for today</p> : (
             <div className="space-y-4">
               {todayItems.map(p => {
-                const itemComments = comments.filter(c => c.target_type === 'proxy' && c.target_id === p.id);
+                const itemComments = comments.filter(c => c.target_type === 'proxy' && c.target_id === String(p.id));
                 return (
                   <div key={p.id} className="card p-5 border-l-4 border-red-500">
                     <div className="flex justify-between items-start mb-3">
@@ -546,7 +594,6 @@
                     </div>
                     <p className="text-sm border-t border-[#2c2c2e] pt-3">Subject: {p.subject}</p>
 
-                    {/* Comments */}
                     <div className="mt-4 border-t border-[#2c2c2e] pt-3">
                       <p className="text-xs text-gray-400 mb-2">Comments ({itemComments.length})</p>
                       {itemComments.map(c => (
@@ -572,7 +619,7 @@
       );
     }
 
-    // ==================== REPORT (Medical + Facility) ====================
+    // ==================== REPORT ====================
     function ReportTab({ user }) {
       const { data: medical, add: addMed, update: upMed } = useCollection('medical');
       const { data: maint, add: addMaint, update: upMaint } = useCollection('maintenance');
@@ -666,9 +713,11 @@
 
     // ==================== CHAT ====================
     function ChatTab({ user }) {
-      const { data, add, remove } = useCollection('chat_messages');
+      const { data, add, update, remove } = useCollection('chat_messages');
+      const { data: reactions, add: addReaction, remove: removeReaction } = useCollection('reactions');
       const [message, setMessage] = useState('');
       const [file, setFile] = useState(null);
+      const [editId, setEditId] = useState(null);
       const bottomRef = useRef();
 
       useEffect(() => {
@@ -676,111 +725,160 @@
       }, [data]);
 
       const send = async () => {
-        if (!message.trim() && !file) return;
+        if (!message.trim() && !file && !editId) return;
         let file_url = null;
-        if (file) file_url = await uploadFile(file);
-        add({ sender_name: user.name, sender_role: user.role, message: message.trim(), file_url });
+        if (file) {
+          file_url = await uploadFile(file);
+          if (!file_url && file) return;
+        }
+
+        if (editId) {
+          const changes = { message: message.trim() };
+          if (file_url) changes.file_url = file_url;
+          update(editId, changes);
+          setEditId(null);
+        } else {
+          add({ sender_name: user.name, sender_role: user.role, message: message.trim(), file_url });
+        }
         setMessage('');
         setFile(null);
+      };
+
+      const startEdit = (m) => {
+        setEditId(m.id);
+        setMessage(m.message || '');
       };
 
       return (
         <div className="space-y-4 max-w-3xl">
           <h2 className="text-2xl font-bold">Staff Chat</h2>
           <div className="card p-4 chat-box space-y-3">
-            {data.slice().reverse().map(m => (
-              <div key={m.id} className={`flex ${m.sender_name === user.name ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${m.sender_name === user.name ? 'bg-red-500/20' : 'bg-[#252528]'}`}>
-                  <div className="flex justify-between items-center gap-3 mb-1">
-                    <span className="text-xs font-medium text-red-400">{m.sender_name} · {m.sender_role}</span>
-                    {user.role === 'ADMIN' && (
-                      <button onClick={() => { if(confirm('Delete message?')) remove(m.id); }} className="text-red-400 text-xs">Delete</button>
+            {data.slice().reverse().map(m => {
+              const canEdit = user.role === 'ADMIN' || m.sender_name === user.name;
+              return (
+                <div key={m.id} className={`flex ${m.sender_name === user.name ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${m.sender_name === user.name ? 'bg-red-500/20' : 'bg-[#252528]'}`}>
+                    <div className="flex justify-between items-center gap-3 mb-1">
+                      <span className="text-xs font-medium text-red-400">{m.sender_name} · {m.sender_role}</span>
+                      <div className="flex gap-2">
+                        {canEdit && <button onClick={() => startEdit(m)} className="text-blue-400 text-xs">Edit</button>}
+                        {user.role === 'ADMIN' && <button onClick={() => { if(confirm('Delete?')) remove(m.id); }} className="text-red-400 text-xs">Delete</button>}
+                      </div>
+                    </div>
+                    {m.message && <p className="text-sm">{linkify(m.message)}</p>}
+                    {m.file_url && (
+                      <a href={m.file_url} target="_blank" className="text-blue-400 text-sm flex items-center gap-1 mt-1">
+                        <IconFile /> Attachment
+                      </a>
                     )}
+                    <Reactions targetType="chat" targetId={m.id} user={user} reactions={reactions} addReaction={addReaction} removeReaction={removeReaction} />
                   </div>
-                  {m.message && <p className="text-sm">{linkify(m.message)}</p>}
-                  {m.file_url && (
-                    <a href={m.file_url} target="_blank" className="text-blue-400 text-sm flex items-center gap-1 mt-1">
-                      <IconFile /> Attachment
-                    </a>
-                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
             <div ref={bottomRef}></div>
           </div>
 
           <div className="card p-3 flex flex-col gap-2">
+            {editId && <p className="text-xs text-yellow-400">Editing message...</p>}
             <div className="flex gap-2">
               <input value={message} onChange={e => setMessage(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()} placeholder="Type a message..." className="flex-1 p-3 bg-[#2c2c2e] rounded-xl text-white" />
-              <button onClick={send} className="bg-gradient-to-r from-red-500 to-pink-500 px-5 rounded-xl font-semibold">Send</button>
+              <button onClick={send} className="bg-gradient-to-r from-red-500 to-pink-500 px-5 rounded-xl font-semibold">{editId ? 'Update' : 'Send'}</button>
             </div>
-            {(user.role === 'ADMIN' || user.role === 'TEACHER' || user.role === 'DOCTOR') && (
-              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e => setFile(e.target.files[0])} className="text-sm text-gray-400" />
-            )}
+            <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e => setFile(e.target.files[0])} className="text-sm text-gray-400" />
           </div>
         </div>
       );
     }
 
-    // ==================== EXAM RESULTS ====================
+    // ==================== EXAM RESULTS (Only Admin can upload) ====================
     function ResultsTab({ user }) {
-      const { data, add, remove } = useCollection('exam_results');
+      const { data, add, update, remove } = useCollection('exam_results');
+      const { data: reactions, add: addReaction, remove: removeReaction } = useCollection('reactions');
       const [show, setShow] = useState(false);
+      const [editId, setEditId] = useState(null);
       const [title, setTitle] = useState('');
       const [description, setDescription] = useState('');
       const [file, setFile] = useState(null);
 
-      const canUpload = user.role === 'ADMIN' || user.role === 'TEACHER';
+      const isAdmin = user.role === 'ADMIN';
 
       const save = async () => {
         if (!title) return alert('Title is required');
         let file_url = null;
-        if (file) file_url = await uploadFile(file);
-        add({ title, description, file_url, uploaded_by: user.name });
-        setShow(false); setTitle(''); setDescription(''); setFile(null);
+        if (file) {
+          file_url = await uploadFile(file);
+          if (!file_url && file) return;
+        }
+
+        if (editId) {
+          const changes = { title, description };
+          if (file_url) changes.file_url = file_url;
+          update(editId, changes);
+        } else {
+          add({ title, description, file_url, uploaded_by: user.name });
+        }
+        setShow(false); setEditId(null); setTitle(''); setDescription(''); setFile(null);
+      };
+
+      const startEdit = (r) => {
+        setEditId(r.id);
+        setTitle(r.title);
+        setDescription(r.description || '');
+        setShow(true);
       };
 
       return (
         <div className="space-y-5 max-w-3xl">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold">Exam & Class Test Results</h2>
-            {canUpload && (
-              <button onClick={() => setShow(!show)} className="bg-red-500/15 text-red-400 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2">
+            {isAdmin && (
+              <button onClick={() => { setShow(!show); setEditId(null); setTitle(''); setDescription(''); setFile(null); }} className="bg-red-500/15 text-red-400 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2">
                 <IconPlus /> Upload Result
               </button>
             )}
           </div>
 
-          {show && canUpload && (
+          {show && isAdmin && (
             <div className="card p-5 space-y-3">
               <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title (e.g. Class 10 Midterm)" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white" />
               <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description (optional)" className="w-full p-3 bg-[#2c2c2e] rounded-xl text-white min-h-[80px]" />
               <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e => setFile(e.target.files[0])} className="w-full text-sm text-gray-400" />
-              <button onClick={save} className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">Upload</button>
+              <div className="flex gap-3">
+                <button onClick={save} className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-3 rounded-xl">{editId ? 'Update' : 'Upload'}</button>
+                <button onClick={() => { setShow(false); setEditId(null); }} className="px-5 bg-[#2c2c2e] rounded-xl">Cancel</button>
+              </div>
             </div>
           )}
 
           {data.length === 0 ? <p className="text-center text-gray-400 py-12">No results uploaded yet</p> : (
             <div className="space-y-3">
-              {data.map(r => (
-                <div key={r.id} className="card p-5 border-l-4 border-blue-500">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-bold text-lg">{r.title}</h3>
-                      <p className="text-xs text-gray-400 mb-2">By {r.uploaded_by}</p>
+              {data.map(r => {
+                const canEdit = isAdmin || r.uploaded_by === user.name;
+                return (
+                  <div key={r.id} className="card p-5 border-l-4 border-blue-500">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-bold text-lg">{r.title}</h3>
+                        <p className="text-xs text-gray-400 mb-2">By {r.uploaded_by}</p>
+                      </div>
+                      {canEdit && (
+                        <div className="flex gap-2">
+                          <button onClick={() => startEdit(r)} className="text-blue-400 p-1"><IconEdit /></button>
+                          {isAdmin && <button onClick={() => { if(confirm('Delete?')) remove(r.id); }} className="text-red-400 p-1"><IconTrash /></button>}
+                        </div>
+                      )}
                     </div>
-                    {(user.role === 'ADMIN' || r.uploaded_by === user.name) && (
-                      <button onClick={() => { if(confirm('Delete?')) remove(r.id); }} className="text-red-400 p-1"><IconTrash /></button>
+                    {r.description && <p className="text-sm mb-2">{linkify(r.description)}</p>}
+                    {r.file_url && (
+                      <a href={r.file_url} target="_blank" className="text-blue-400 text-sm flex items-center gap-1">
+                        <IconFile /> View / Download File
+                      </a>
                     )}
+                    <Reactions targetType="exam" targetId={r.id} user={user} reactions={reactions} addReaction={addReaction} removeReaction={removeReaction} />
                   </div>
-                  {r.description && <p className="text-sm mb-2">{linkify(r.description)}</p>}
-                  {r.file_url && (
-                    <a href={r.file_url} target="_blank" className="text-blue-400 text-sm flex items-center gap-1">
-                      <IconFile /> View / Download File
-                    </a>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
