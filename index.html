@@ -4,8 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bes An Noor Model School (Boys' Unit)</title>
+  
+  <!-- Manifest & PWA -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0b0b0e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -673,13 +678,10 @@
 
     function ChatTab({ user }) {
       const { data, add, update, remove } = useCollection('chat_messages');
-      const { data: reactions, add: addReaction, remove: removeReaction } = useCollection('reactions');
       const [message, setMessage] = useState('');
       const [file, setFile] = useState(null);
       const [editId, setEditId] = useState(null);
-      const [reactingTo, setReactingTo] = useState(null);
       const bottomRef = useRef();
-      const longPressTimer = useRef(null);
 
       useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -710,43 +712,6 @@
         setMessage(m.message || '');
       };
 
-      const handleTouchStart = (id) => {
-        longPressTimer.current = setTimeout(() => {
-          setReactingTo(id);
-        }, 500);
-      };
-
-      const handleTouchEnd = () => {
-        clearTimeout(longPressTimer.current);
-      };
-
-      const handleContextMenu = (e, id) => {
-        e.preventDefault();
-        setReactingTo(id);
-      };
-
-      const emojis = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
-
-      const toggleReaction = (targetId, emoji) => {
-        const existing = reactions.find(r => 
-          r.target_type === 'chat' && 
-          r.target_id === String(targetId) && 
-          r.user_name === user.name
-        );
-
-        if (existing) {
-          if (existing.emoji === emoji) {
-            removeReaction(existing.id);
-          } else {
-            removeReaction(existing.id);
-            addReaction({ target_type: 'chat', target_id: String(targetId), user_name: user.name, emoji });
-          }
-        } else {
-          addReaction({ target_type: 'chat', target_id: String(targetId), user_name: user.name, emoji });
-        }
-        setReactingTo(null);
-      };
-
       const isImage = (url) => {
         if (!url) return false;
         return url.match(/\.(jpeg|jpg|png|gif|webp)$/i);
@@ -764,22 +729,10 @@
           <div className="card p-4 chat-box space-y-3">
             {data.slice().reverse().map(m => {
               const canEdit = user.role === 'ADMIN' || m.sender_name === user.name;
-              const messageReactions = reactions.filter(r => r.target_type === 'chat' && r.target_id === String(m.id));
-              
-              const reactionCounts = {};
-              messageReactions.forEach(r => {
-                reactionCounts[r.emoji] = (reactionCounts[r.emoji] || 0) + 1;
-              });
 
               return (
                 <div key={m.id} className={`flex ${m.sender_name === user.name ? 'justify-end' : 'justify-start'}`}>
-                  <div 
-                    className={`max-w-[80%] rounded-2xl px-4 py-2 relative ${m.sender_name === user.name ? 'bg-red-500/20' : 'bg-[#252528]'}`}
-                    onTouchStart={() => handleTouchStart(m.id)}
-                    onTouchEnd={handleTouchEnd}
-                    onTouchMove={handleTouchEnd}
-                    onContextMenu={(e) => handleContextMenu(e, m.id)}
-                  >
+                  <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${m.sender_name === user.name ? 'bg-red-500/20' : 'bg-[#252528]'}`}>
                     <div className="flex justify-between items-center gap-3 mb-1">
                       <span className="text-xs font-medium text-red-400">{m.sender_name} · {m.sender_role}</span>
                       <div className="flex gap-2">
@@ -817,33 +770,6 @@
                       <a href={m.file_url} target="_blank" className="text-blue-400 text-sm flex items-center gap-1 mt-2">
                         <IconFile /> Attachment
                       </a>
-                    )}
-
-                    {Object.keys(reactionCounts).length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {Object.entries(reactionCounts).map(([emoji, count]) => (
-                          <span key={emoji} className="text-xs bg-[#2c2c2e] px-2 py-0.5 rounded-full">
-                            {emoji} {count > 1 ? count : ''}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {reactingTo === m.id && (
-                      <div className="absolute -top-12 left-0 right-0 flex justify-center z-50">
-                        <div className="bg-[#2c2c2e] rounded-full px-3 py-2 flex gap-2 shadow-xl border border-[#3a3a3c]">
-                          {emojis.map(e => (
-                            <button 
-                              key={e} 
-                              onClick={() => toggleReaction(m.id, e)}
-                              className="text-xl hover:scale-125 transition"
-                            >
-                              {e}
-                            </button>
-                          ))}
-                          <button onClick={() => setReactingTo(null)} className="text-gray-400 text-sm ml-1">✕</button>
-                        </div>
-                      </div>
                     )}
                   </div>
                 </div>
