@@ -89,12 +89,17 @@
       stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
     }
     .chat-wrapper {
-      display: flex; flex-direction: column;
-      height: calc(100vh - 120px);
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 128px);
     }
-    .chat-messages { flex: 1; overflow-y: auto; padding: 16px; }
-    .chat-input-bar {
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
       padding: 12px 16px;
+    }
+    .chat-input-bar {
+      padding: 10px 12px 12px;
       border-top: 1px solid var(--card-border);
       background: var(--card);
       backdrop-filter: blur(20px);
@@ -119,7 +124,6 @@
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlaXlidWhub3pncWF0ZHlyZGhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzIyNDEsImV4cCI6MjEwMjU0ODI0MX0.a_1otAvBMRa20HSA01jcvtCbxwUpXNbmCzVmA9Qm-DE';
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // ========== Icons ==========
     const IconHome = () => (<span className="icon"><svg viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg></span>);
     const IconClipboard = () => (<span className="icon"><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></span>);
     const IconCalendar = () => (<span className="icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>);
@@ -136,19 +140,30 @@
     const IconSun = () => (<span className="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></span>);
     const IconMoon = () => (<span className="icon"><svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></span>);
 
-    // ========== Helpers ==========
     function formatDate(dateStr) {
       if (!dateStr) return '';
-      const [y, m, d] = dateStr.split('-');
-      return `\( {d}/ \){m}/${y}`;
+      try {
+        const parts = dateStr.split('-');
+        if (parts.length !== 3) return dateStr;
+        return parts[2] + '/' + parts[1] + '/' + parts[0];
+      } catch (e) {
+        return dateStr;
+      }
     }
+
     function formatTime(timeStr) {
       if (!timeStr) return '';
-      const [h, m] = timeStr.split(':');
-      const hour = parseInt(h, 10);
-      const ampm = hour >= 12 ? 'PM' : 'AM';
-      const displayHour = hour % 12 || 12;
-      return `\( {displayHour}: \){m} ${ampm}`;
+      try {
+        const parts = timeStr.split(':');
+        let hour = parseInt(parts[0], 10);
+        const minute = parts[1] || '00';
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        hour = hour % 12;
+        if (hour === 0) hour = 12;
+        return hour + ':' + minute + ' ' + ampm;
+      } catch (e) {
+        return timeStr;
+      }
     }
 
     function useCollection(table) {
@@ -196,7 +211,6 @@
       });
     }
 
-    // ========== APP ==========
     function App() {
       const [user, setUser] = useState(null);
       const [tab, setTab] = useState('home');
@@ -260,7 +274,7 @@
             </button>
           </header>
 
-          <main className={`flex-1 ${tab === 'chat' ? 'overflow-hidden' : 'overflow-y-auto'} ${tab === 'chat' ? '' : 'px-4 pt-5'} pb-24`}>
+          <main className={`flex-1 ${tab === 'chat' ? 'overflow-hidden' : 'overflow-y-auto'} ${tab === 'chat' ? '' : 'px-4 pt-5'} pb-20`}>
             {tab === 'home' && <Home user={user} setTab={setTab} />}
             {tab === 'notices' && <Notices user={user} />}
             {tab === 'schedule' && <ScheduleTab user={user} />}
@@ -293,7 +307,6 @@
       );
     }
 
-    // ========== PIN ==========
     function PinScreen({ onSuccess, onUsePassword, onFullLogout, theme, setTheme }) {
       const [pin, setPin] = useState('');
       const [error, setError] = useState('');
@@ -415,7 +428,6 @@
       );
     }
 
-    // ========== HOME ==========
     function Home({ user, setTab }) {
       const { data: attendance, add, update } = useCollection('attendance');
       const today = new Date().toISOString().split('T')[0];
@@ -531,7 +543,6 @@
       );
     }
 
-    // ========== NOTICES ==========
     function Notices({ user }) {
       const { data, add, remove } = useCollection('notices');
       const [show, setShow] = useState(false);
@@ -581,7 +592,6 @@
       );
     }
 
-    // ========== SCHEDULE ==========
     function ScheduleTab({ user }) {
       const { data, add } = useCollection('proxies');
       const today = new Date().toISOString().split('T')[0];
@@ -591,7 +601,17 @@
 
       const save = () => {
         if (!form.proxy_teacher) return alert('Proxy Teacher is required');
-        add(form);
+        // section column may not exist yet - send only if filled
+        const payload = {
+          date: form.date,
+          type: form.type,
+          absent_teacher: form.absent_teacher,
+          proxy_teacher: form.proxy_teacher,
+          class_room: form.class_room,
+          subject: form.subject
+        };
+        if (form.section) payload.section = form.section;
+        add(payload);
         setShow(false);
         setForm({ date: today, type: 'PROXY', absent_teacher: '', proxy_teacher: '', class_room: '', section: '', subject: '' });
       };
@@ -633,7 +653,7 @@
                 <span className="px-3 py-1 rounded-full font-medium" style={{background: p.type === 'REPLACE' ? 'rgba(0,113,227,0.15)' : 'rgba(255,69,58,0.15)', color: p.type === 'REPLACE' ? 'var(--accent)' : 'var(--danger)'}}>
                   {p.type}
                 </span>
-                <span className="px-3 py-1 rounded-full glass text-secondary">{p.class_room}{p.section ? `-${p.section}` : ''}</span>
+                <span className="px-3 py-1 rounded-full glass text-secondary">{p.class_room}{p.section ? '-' + p.section : ''}</span>
               </div>
               <div className="flex gap-6 text-sm">
                 <div className="flex-1">
@@ -654,7 +674,6 @@
       );
     }
 
-    // ========== REPORT ==========
     function ReportTab({ user }) {
       const { data: medical, add: addMed } = useCollection('medical');
       const { data: maint, add: addMaint } = useCollection('maintenance');
@@ -665,7 +684,7 @@
       const submit = () => {
         if (type === 'medical') {
           if (!form.student_name || !form.description) return alert('Required fields missing');
-          addMed({ student_name: form.student_name, room: `Class: ${form.class_name||'-'} | Reg: ${form.reg||'-'} | Room: ${form.room_number||'-'}`, description: form.description, reported_by: user.name, status: 'PENDING' });
+          addMed({ student_name: form.student_name, room: 'Class: ' + (form.class_name||'-') + ' | Reg: ' + (form.reg||'-') + ' | Room: ' + (form.room_number||'-'), description: form.description, reported_by: user.name, status: 'PENDING' });
         } else {
           if (!form.issue_type || !form.description) return alert('Required fields missing');
           addMaint({ type: form.issue_type, location: form.location||'-', description: form.description, reported_by: user.name, status: 'PENDING' });
@@ -724,7 +743,6 @@
       );
     }
 
-    // ========== CHAT ==========
     function ChatTab({ user }) {
       const { data, add, remove } = useCollection('chat_messages');
       const { data: allUsers } = useCollection('users');
@@ -830,10 +848,6 @@
               </div>
             )}
             <div className="flex gap-2 items-center">
-              <button onClick={() => fileRef.current.click()} className="w-10 h-10 rounded-full glass flex items-center justify-center">
-                <IconPaperclip />
-              </button>
-              <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => setFile(e.target.files[0])} />
               <input
                 value={message}
                 onChange={e => handleInput(e.target.value)}
@@ -841,18 +855,31 @@
                 placeholder="Message... (@name)"
                 className="flex-1 p-3 rounded-full glass-input text-sm"
               />
-              <button onClick={recording ? stopRec : startRec} className={`w-10 h-10 rounded-full flex items-center justify-center ${recording ? 'text-white' : 'glass'}`} style={recording ? {background:'var(--danger)'} : {}}>
+              <button onClick={() => fileRef.current.click()} className="w-10 h-10 rounded-full glass flex items-center justify-center flex-shrink-0">
+                <IconPaperclip />
+              </button>
+              <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => setFile(e.target.files[0])} />
+              <button
+                onClick={recording ? stopRec : startRec}
+                className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${recording ? 'text-white' : 'glass'}`}
+                style={recording ? {background:'var(--danger)'} : {}}
+              >
                 <IconMic />
               </button>
-              <button onClick={send} className="btn-primary px-5 py-2.5 text-sm">Send</button>
+              <button onClick={send} className="btn-primary px-5 py-2.5 text-sm flex-shrink-0">
+                Send
+              </button>
             </div>
-            {recording && <p className="text-xs mt-1.5 animate-pulse" style={{color:'var(--danger)'}}>Recording... tap mic to stop</p>}
+            {recording && (
+              <p className="text-xs mt-1.5 animate-pulse" style={{color:'var(--danger)'}}>
+                Recording... tap mic to stop
+              </p>
+            )}
           </div>
         </div>
       );
     }
 
-    // ========== RESULTS ==========
     function ResultsTab({ user }) {
       const { data, add, remove } = useCollection('exam_results');
       const [show, setShow] = useState(false);
@@ -902,7 +929,6 @@
       );
     }
 
-    // ========== PROFILE ==========
     function Profile({ user, setTab, onFullLogout, theme, setTheme }) {
       return (
         <div className="space-y-5 px-1">
@@ -936,7 +962,6 @@
       );
     }
 
-    // ========== USERS ==========
     function Users() {
       const { data, add, remove } = useCollection('users');
       const [show, setShow] = useState(false);
